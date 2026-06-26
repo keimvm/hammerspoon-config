@@ -7,7 +7,7 @@ end)
 -- toggle / cycle application windows
 
 local log = hs.logger.new("init", "warning")
-local appState = {} -- key: bundleID or appName -> { lastWinId = number }
+local appState = {}  -- key: bundleID or appName -> { lastWinId = number }
 local openTasks = {} -- keep hs.task references alive
 
 local function stateKey(app, fallbackName)
@@ -215,11 +215,14 @@ end
 local home = os.getenv("HOME")
 
 makeToggle("MarkEdit", { "ctrl" }, "m", home .. "/Desktop/memo") -- Ctrl+m
-makeToggle("Marta", { "ctrl" }, "f")
+makeToggle("Finder", { "ctrl" }, "f")
 makeToggle("Spark", { "ctrl" }, "o")
-makeToggle("Google Chrome", { "ctrl" }, "p")
-makeToggle("Ghostty", { "ctrl" }, "t")
-makeToggle("Zed", { "ctrl" }, "r")
+makeToggle("Google Chrome", { "ctrl" }, "b")
+makeToggle("cmux", { "ctrl" }, "t")
+-- makeToggle("Ghostty", { "ctrl" }, "t")
+makeToggle("Codex", { "ctrl" }, "r")
+-- makeToggle("Zed", { "ctrl" }, "r")
 makeToggle("ChatGPT Atlas", { "ctrl" }, "g")
-makeToggle("Notion", { "ctrl" }, "n")
+makeToggle("Obsidian", { "ctrl" }, "n")
+--makeToggle("iA Writer", { "ctrl" }, "n")
 --makeToggle("YouTube", { "ctrl" }, "y")
