@@ -208,6 +208,8 @@ local function makeToggle(appName, mods, key, dirToOpen)
   end)
 end
 
+local unicodeConverter = require("unicode_converter")
+
 ----------------------------------------------------------------------
 -- bindings
 ----------------------------------------------------------------------
@@ -226,3 +228,5 @@ makeToggle("ChatGPT Atlas", { "ctrl" }, "g")
 makeToggle("Obsidian", { "ctrl" }, "n")
 --makeToggle("iA Writer", { "ctrl" }, "n")
 --makeToggle("YouTube", { "ctrl" }, "y")
+
+unicodeConverter.bindHotkey({ "cmd", "shift" }, "u")
