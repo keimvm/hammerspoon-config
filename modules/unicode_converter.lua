@@ -2,6 +2,11 @@ local M = {}
 
 local MAX_CLIPBOARD_BYTES = 1024
 local MAX_CLIPBOARD_LINES = 10
+local CHOOSER_WIDTH = 30
+local CHOOSER_ROWS = 3
+local CHOOSER_PLACEHOLDER = "Character or code point"
+local CHOOSER_FG = { red = 0.96, green = 0.97, blue = 0.98, alpha = 1 }
+local CHOOSER_SUBTEXT = { red = 0.66, green = 0.70, blue = 0.76, alpha = 1 }
 
 local chooser = nil
 local chooserVisible = false
@@ -115,16 +120,21 @@ local function displayText(text)
   return text:sub(1, 77) .. "..."
 end
 
+local function disabledChoice(text, subText)
+  return {
+    text = text,
+    subText = subText,
+    disabled = true,
+    valid = false,
+  }
+end
+
 local function buildChoices(query)
   local input = trim(query or "")
 
   if input == "" then
     return {
-      {
-        text = "Type a character or code point",
-        subText = "Examples: あ, U+3042, 0x1F600, 3042",
-        disabled = true,
-      },
+      disabledChoice("Unicode Converter", "Examples: あ  U+3042  0x1F600  3042"),
     }
   end
 
@@ -133,22 +143,14 @@ local function buildChoices(query)
     output, detail = codePointsToString(input)
     if not output then
       return {
-        {
-          text = detail,
-          subText = "Nothing will be copied",
-          disabled = true,
-        },
+        disabledChoice(detail, "No result"),
       }
     end
   else
     output, detail = stringToCodePoints(input)
     if not output then
       return {
-        {
-          text = detail,
-          subText = "Nothing will be copied",
-          disabled = true,
-        },
+        disabledChoice(detail, "No result"),
       }
     end
   end
@@ -177,6 +179,12 @@ local function ensureChooser()
     alertCopied(choice.copyText)
   end)
 
+  chooser:width(CHOOSER_WIDTH)
+  chooser:rows(CHOOSER_ROWS)
+  chooser:bgDark(true)
+  chooser:fgColor(CHOOSER_FG)
+  chooser:subTextColor(CHOOSER_SUBTEXT)
+  chooser:placeholderText(CHOOSER_PLACEHOLDER)
   chooser:searchSubText(true)
   chooser:choices(buildChoices(""))
   chooser:queryChangedCallback(function(query)
