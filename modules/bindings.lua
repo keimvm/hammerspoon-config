@@ -1,5 +1,4 @@
 local appSwitcher = require("modules.app_switcher")
-local unicodeConverter = require("modules.unicode_converter")
 
 local M = {}
 
@@ -17,6 +16,7 @@ function M.bind(config)
   end
 
   if config.unicodeConverter and enabled(config.unicodeConverter) then
+    local unicodeConverter = require("modules.unicode_converter")
     unicodeConverter.bindHotkey(config.unicodeConverter.mods, config.unicodeConverter.key)
   end
 end

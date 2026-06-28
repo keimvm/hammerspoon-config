@@ -8,7 +8,7 @@ bindings.bind({
   appSwitchers = {
     { appName = "MarkEdit", mods = { "ctrl" }, key = "m", dirToOpen = home .. "/Desktop/memo" },
     { appName = "Finder", mods = { "ctrl" }, key = "f" },
-    { appName = "Spark", mods = { "ctrl" }, key = "o" },
+    { appName = "メール", mods = { "ctrl" }, key = "o" },
     { appName = "Google Chrome", mods = { "ctrl" }, key = "b" },
     { appName = "cmux", mods = { "ctrl" }, key = "t" },
     --{ appName = "Ghostty", mods = { "ctrl" }, key = "t", enabled = false },
@@ -20,6 +20,7 @@ bindings.bind({
     --{ appName = "YouTube", mods = { "ctrl" }, key = "y", enabled = false },
   },
   unicodeConverter = {
+    enabled = false,
     mods = { "cmd", "shift" },
     key = "u",
   },
