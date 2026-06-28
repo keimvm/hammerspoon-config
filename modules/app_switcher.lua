@@ -201,9 +201,9 @@ function M.toggleOrCycle(appName, dirToOpen)
   appState[key].lastWinId = wins[idx]:id()
 end
 
-function M.bindToggle(appName, mods, key, dirToOpen)
-  hs.hotkey.bind(mods, key, function()
-    M.toggleOrCycle(appName, dirToOpen)
+function M.bindToggle(binding, registry)
+  registry:bind(binding, function()
+    M.toggleOrCycle(binding.appName, binding.dirToOpen)
   end)
 end
 

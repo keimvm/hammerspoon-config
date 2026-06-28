@@ -20,18 +20,18 @@ local function postModifier(key, isDown, userData)
   virtualModifierDown = isDown
 end
 
-local function bindArrowHotkeys(arrows)
+local function bindArrowHotkeys(arrows, registry)
   for _, binding in ipairs(arrows or {}) do
-    hs.hotkey.bind(binding.mods, binding.key, function()
+    registry:bind(binding, function()
       hs.eventtap.keyStroke({}, binding.arrow, 0)
     end)
   end
 end
 
-function M.bind(config)
+function M.bind(config, registry)
   config = config or {}
 
-  bindArrowHotkeys(config.arrows)
+  bindArrowHotkeys(config.arrows, registry)
 
   if config.sentinelCommand and config.sentinelCommand.enabled ~= false then
     local sentinelKeyCode = hs.keycodes.map[config.sentinelCommand.sentinelKey]

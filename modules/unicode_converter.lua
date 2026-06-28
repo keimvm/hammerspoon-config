@@ -217,8 +217,4 @@ function M.toggle()
   end
 end
 
-function M.bindHotkey(mods, key)
-  hs.hotkey.bind(mods, key, M.toggle)
-end
-
 return M

@@ -2,22 +2,18 @@ local appSwitcher = require("modules.app_switcher")
 
 local M = {}
 
-local function enabled(config)
-  return config.enabled ~= false
-end
-
-function M.bind(config)
+function M.bind(config, registry)
   config = config or {}
 
   for _, binding in ipairs(config.appSwitchers or {}) do
-    if enabled(binding) then
-      appSwitcher.bindToggle(binding.appName, binding.mods, binding.key, binding.dirToOpen)
-    end
+    appSwitcher.bindToggle(binding, registry)
   end
 
-  if config.unicodeConverter and enabled(config.unicodeConverter) then
-    local unicodeConverter = require("modules.unicode_converter")
-    unicodeConverter.bindHotkey(config.unicodeConverter.mods, config.unicodeConverter.key)
+  if config.unicodeConverter then
+    registry:bind(config.unicodeConverter, function()
+      local unicodeConverter = require("modules.unicode_converter")
+      unicodeConverter.toggle()
+    end)
   end
 end
 
