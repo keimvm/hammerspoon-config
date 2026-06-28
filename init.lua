@@ -1,8 +1,37 @@
 local bindings = require("modules.bindings")
+local commandKeys = require("modules.command_keys")
+local controlLayer = require("modules.control_layer")
+local hidRemap = require("modules.hid_remap")
 
 local home = os.getenv("HOME")
 
+hidRemap.apply({
+  enabled = true,
+  mappings = {
+    { from = "caps_lock", to = "left_control" },
+    { from = "left_control", to = "left_command" },
+  },
+})
+
 require("modules.reload").bind()
+
+controlLayer.bind({
+  arrows = {
+    { mods = { "ctrl" }, key = "i", arrow = "up" },
+    { mods = { "ctrl" }, key = "j", arrow = "left" },
+    { mods = { "ctrl" }, key = "k", arrow = "down" },
+    { mods = { "ctrl" }, key = "l", arrow = "right" },
+  },
+})
+
+commandKeys.bind({
+  enabled = true,
+  bindings = {
+    -- JIS keyboard: 0x66 = 英数, 0x68 = かな。
+    { commandKey = "cmd", outputKeyCode = 0x66 },
+    { commandKey = "rightcmd", outputKeyCode = 0x68 },
+  },
+})
 
 bindings.bind({
   appSwitchers = {
