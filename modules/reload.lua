@@ -1,8 +1,7 @@
 local M = {}
 
-function M.bind()
-  -- F5 -> Cmd+R
-  hs.hotkey.bind({}, "F5", function()
+function M.bind(hotkey, registry)
+  registry:bind(hotkey, function()
     hs.eventtap.keyStroke({ "cmd" }, "r", 0)
   end)
 end
