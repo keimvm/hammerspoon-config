@@ -83,13 +83,21 @@ function M.new()
   return setmetatable({ hotkeys = {} }, Registry)
 end
 
-function Registry:bind(hotkey, callback)
+local function requireOptionalFunction(value, fieldName, hotkeyId)
+  if value ~= nil and type(value) ~= "function" then
+    error(string.format("hotkey %s %s must be a function", tostring(hotkeyId or "<unknown>"), fieldName), 3)
+  end
+end
+
+function Registry:bind(hotkey, pressedFn, releasedFn, repeatFn)
   local mods, key = validateMetadata(hotkey)
   if not enabled(hotkey) then return nil end
 
-  if type(callback) ~= "function" then
-    error(string.format("hotkey %s callback must be a function", hotkey.id), 2)
+  if type(pressedFn) ~= "function" then
+    error(string.format("hotkey %s pressedFn must be a function", hotkey.id), 2)
   end
+  requireOptionalFunction(releasedFn, "releasedFn", hotkey.id)
+  requireOptionalFunction(repeatFn, "repeatFn", hotkey.id)
 
   local identity = formatHotkey(mods, key)
   local existing = self.hotkeys[identity]
@@ -112,7 +120,7 @@ function Registry:bind(hotkey, callback)
     description = hotkey.description,
   }
 
-  return hs.hotkey.bind(hotkey.mods or {}, hotkey.key, callback)
+  return hs.hotkey.bind(hotkey.mods or {}, hotkey.key, pressedFn, releasedFn, repeatFn)
 end
 
 return M

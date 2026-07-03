@@ -22,9 +22,10 @@ end
 
 local function bindArrowHotkeys(arrows, registry)
   for _, binding in ipairs(arrows or {}) do
-    registry:bind(binding, function()
+    local pressArrow = function()
       hs.eventtap.keyStroke({}, binding.arrow, 0)
-    end)
+    end
+    registry:bind(binding, pressArrow, nil, pressArrow)
   end
 end
 
