@@ -54,7 +54,8 @@ local function addDefinitionError(errors, path, message)
   table.insert(errors, string.format("%s %s", path, message))
 end
 
-local function knownKey(key)
+function M.isKnownKey(key)
+  if type(key) ~= "string" or key == "" then return false end
   local keycodes = hs and hs.keycodes and hs.keycodes.map or {}
   return keycodes[key] ~= nil or keycodes[string.lower(key)] ~= nil
 end
@@ -108,7 +109,7 @@ local function validateDefinition(errors, entry)
   if type(hotkey.key) ~= "string" or hotkey.key == "" then
     addDefinitionError(errors, path .. ".key", "must be a non-empty string")
     identityValid = false
-  elseif not knownKey(hotkey.key) then
+  elseif not M.isKnownKey(hotkey.key) then
     addDefinitionError(errors, path .. ".key", "is unknown: " .. hotkey.key)
     identityValid = false
   else

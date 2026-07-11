@@ -36,8 +36,7 @@ end
 
 local function validateKnownKey(errors, path, value)
   if type(value) ~= "string" or value == "" then return end
-  local keycodes = hs and hs.keycodes and hs.keycodes.map or {}
-  if keycodes[value] == nil and keycodes[string.lower(value)] == nil then
+  if not hotkeyRegistry.isKnownKey(value) then
     addError(errors, path, "is unknown: " .. value)
   end
 end
