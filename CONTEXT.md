@@ -20,6 +20,10 @@ _Avoid_: Binding key, shortcut id
 `init.lua` に宣言される、登録したい Hotkey の設定。Hotkey Registry が検証と登録を行う前の意図を表す。
 _Avoid_: Hotkey config, shortcut setting
 
+**App Switcher**:
+Desired Hotkey に対応する macOS app を起動、focus、hide、または window cycle する feature。対象 app と Hotkey の選択は `init.lua` の設定が表す。
+_Avoid_: App launcher
+
 **Input Remap**:
 物理キーや低レベル入力イベントを別の入力に変換する設定。`eventtap` や `hidutil` に寄るものを含み、Hotkey とは別に扱う。
 _Avoid_: Hotkey, shortcut
