@@ -145,4 +145,4 @@ M1 の fake `hs` adapter を使い、App Switcher を現在の interface から 
 | M3 | #2 Input Remap の安全性を検証する | feature module ごとに検証し、実在する risk だけを解消する |
 | M4 | #4 App Switcher を現行 interface から検証する | 現行 interface を評価し、必要な場合だけ internal seam を追加する |
 
-M1 / issue #5 と M2 / issue #3 は、Automated Verification と Manual Runtime Verification の完了 gate を満たして close した。現在の実行点は M3 / issue #2 とする。各 issue は前のマイルストーンの完了 gate を満たしてから開始する。
+M1 / issue #5、M2 / issue #3、M3 / issue #2 は、Automated Verification と Manual Runtime Verification の完了 gate を満たして close した。現在の実行点は M4 / issue #4 とする。各 issue は前のマイルストーンの完了 gate を満たしてから開始する。
