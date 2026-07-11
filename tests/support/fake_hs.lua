@@ -73,6 +73,7 @@ function M.new()
     tasks = {},
     timers = {},
     pasteboardText = "",
+    operations = {},
   }
 
   local hs = {
@@ -96,12 +97,7 @@ function M.new()
     hotkey = {},
     fs = {},
     json = {},
-    keycodes = {
-      map = {
-        cmd = 55,
-        rightcmd = 54,
-      },
-    },
+    keycodes = {},
     logger = {},
     osascript = {},
     pasteboard = {},
@@ -109,7 +105,37 @@ function M.new()
     timer = {},
   }
 
+  local keycodes = {
+    cmd = 55,
+    rightcmd = 54,
+    f5 = 96,
+    b = 11,
+    f = 3,
+    g = 5,
+    i = 34,
+    j = 38,
+    k = 40,
+    l = 37,
+    m = 46,
+    n = 45,
+    o = 31,
+    r = 15,
+    t = 17,
+    u = 32,
+    up = 126,
+    left = 123,
+    down = 125,
+    right = 124,
+  }
+  hs.keycodes.map = setmetatable({}, {
+    __index = function(_, key)
+      table.insert(state.operations, "keycode.lookup")
+      return keycodes[key]
+    end,
+  })
+
   function hs.hotkey.bind(mods, key, pressedFn, releasedFn, repeatFn)
+    table.insert(state.operations, "hotkey.bind")
     local hotkey = {
       mods = mods,
       key = key,
@@ -211,6 +237,7 @@ function M.new()
   end
 
   function hs.eventtap.new(watchedTypes, callback)
+    table.insert(state.operations, "eventtap.new")
     local tap = {
       watchedTypes = watchedTypes,
       callback = callback,
@@ -241,6 +268,7 @@ function M.new()
   end
 
   function hs.task.new(path, callback, args)
+    table.insert(state.operations, "task.new")
     local task = {
       path = path,
       callback = callback,

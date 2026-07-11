@@ -22,6 +22,16 @@ Hammerspoon IPC には接続しない。`hs -c` が利用できない環境で�
 
 Automated Verification が成功してから実施する。Hammerspoon menu の **Reload Config** を使い、Console に error がないことを最初に確認する。
 
+### Config Preflight
+
+1. `config.reload.key` を一時的に `F6` へ変更する。
+2. 同時に `config.unicodeConverter.enabled = "invalid"` と、先頭の App Switcher に `dirToOpen = 42` を設定する。
+3. Hammerspoon menu の **Reload Config** を実行する。Hotkey ではなく menu を使う。
+4. Console に一つの `invalid Hammerspoon config:` error が表示され、その中に `config.unicodeConverter.enabled` と `config.appSwitchers[1].dirToOpen` の両方が含まれることを確認する。
+5. `F6` を押しても reload 用の `cmd+r` が送信されず、validation 失敗後に新しい Hotkey が登録されていないことを確認する。
+6. 3か所を元の値へ戻し、Hammerspoon menu の **Reload Config** を実行する。
+7. Console に error がなく、`F5` と以降の対象 checklist が動作することを確認する。
+
 ### Input Remap
 
 - [ ] `hidutil property --get 'UserKeyMapping'` に `caps_lock` → `left_control` と `left_control` → `left_command` の2 mapping がある。
