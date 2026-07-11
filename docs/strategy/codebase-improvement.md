@@ -14,7 +14,7 @@
 - Hotkey Registry により、Hotkey metadata の検証と重複検出は一元化されている。
 - `luac -p init.lua modules/*.lua` による syntax check は成功する。
 - Hammerspoon process は起動しているが、CLI から IPC message port へ接続できない。この環境では live reload を自動検証の前提にできない。
-- Input Remap、config validation、app switcher の検証 seam、repo-local verification entrypoint は改善候補として残っている。
+- repo-local verification、Config Preflight、Input Remap の安全性、App Switcher の検証は M1〜M4 で完了している。
 
 ## 判断ログ
 
@@ -151,4 +151,4 @@ M1 の fake `hs` adapter を使い、App Switcher を現在の interface から 
 | M3 | #2 Input Remap の安全性を検証する | feature module ごとに検証し、実在する risk だけを解消する |
 | M4 | #4 App Switcher を現行 interface から検証する | 現行 interface を評価し、必要な場合だけ internal seam を追加する |
 
-M1 / issue #5、M2 / issue #3、M3 / issue #2 は、Automated Verification と Manual Runtime Verification の完了 gate を満たして close した。現在の実行点は M4 / issue #4 とする。各 issue は前のマイルストーンの完了 gate を満たしてから開始する。
+M1 / issue #5、M2 / issue #3、M3 / issue #2、M4 / issue #4 は、Automated Verification と Manual Runtime Verification の完了 gate を満たして close した。現在、この戦略に未着手のマイルストーンはない。次の改善候補は、この完了状態を baseline として別の strategy / issue mapping で評価する。
