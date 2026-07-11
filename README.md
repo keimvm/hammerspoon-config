@@ -14,6 +14,7 @@ macOS 用の個人 Hammerspoon 設定です。Hotkey の宣言は主に `init.lu
 - `modules/reload.lua`: reload 用 Hotkey の動作を定義します。
 - `modules/unicode_converter.lua`: 文字と Unicode code point を相互変換する chooser です。
 - `CONTEXT.md`: この repo で使う用語と設計上の境界をまとめています。
+- `docs/strategy/codebase-improvement.md`: 安全に変更できる codebase へ改善するための方針とマイルストーンです。
 
 ## 主な設定
 
