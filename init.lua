@@ -7,8 +7,9 @@ local reload = require("modules.reload")
 local hotkeyRegistry = require("modules.hotkey_registry").new()
 
 local home = os.getenv("HOME")
+local configOverride = ...
 
-local config = {
+local config = configOverride or {
   hidRemap = {
     enabled = true,
     mappings = {

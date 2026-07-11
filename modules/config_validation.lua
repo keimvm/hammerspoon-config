@@ -1,3 +1,6 @@
+local hidRemap = require("modules.hid_remap")
+local hotkeyRegistry = require("modules.hotkey_registry")
+
 local M = {}
 
 local ROOT_TABLE_FIELDS = {
@@ -7,34 +10,6 @@ local ROOT_TABLE_FIELDS = {
   "reload",
   "appSwitchers",
   "unicodeConverter",
-}
-
-local MOD_ALIASES = {
-  command = "cmd",
-  control = "ctrl",
-  option = "alt",
-}
-
-local VALID_MODIFIERS = {
-  alt = true,
-  cmd = true,
-  ctrl = true,
-  fn = true,
-  shift = true,
-}
-
-local MOD_ORDER = {
-  ctrl = 1,
-  alt = 2,
-  shift = 3,
-  cmd = 4,
-  fn = 5,
-}
-
-local VALID_HID_KEYS = {
-  caps_lock = true,
-  left_command = true,
-  left_control = true,
 }
 
 local function addError(errors, path, message)
@@ -67,49 +42,22 @@ local function validateKnownKey(errors, path, value)
   end
 end
 
-local function validateModifiers(errors, path, mods)
-  if type(mods) ~= "table" then return end
-
-  for index, mod in ipairs(mods) do
-    local itemPath = string.format("%s[%d]", path, index)
-    if requireNonEmptyString(errors, itemPath, mod) then
-      local normalized = MOD_ALIASES[string.lower(mod)] or string.lower(mod)
-      if not VALID_MODIFIERS[normalized] then
-        addError(errors, itemPath, "is unknown: " .. mod)
-      end
-    end
-  end
-end
-
 local function validateKnownModifier(errors, path, value)
   if not requireNonEmptyString(errors, path, value) then return end
-  local normalized = MOD_ALIASES[string.lower(value)] or string.lower(value)
-  if not VALID_MODIFIERS[normalized] then
+  if not hotkeyRegistry.isKnownModifier(value) then
     addError(errors, path, "is unknown: " .. value)
   end
 end
 
 local function validateKnownHidKey(errors, path, value)
   if not requireNonEmptyString(errors, path, value) then return end
-  if not VALID_HID_KEYS[value] then
+  if not hidRemap.supportsKey(value) then
     addError(errors, path, "is unknown: " .. value)
   end
 end
 
-local function validateHotkey(errors, path, hotkey, hotkeys)
-  if not requireTable(errors, path, hotkey) then return end
-
+local function collectHotkey(path, hotkey, hotkeys)
   table.insert(hotkeys, { path = path, value = hotkey })
-
-  validateEnabled(errors, path, hotkey.enabled)
-  requireNonEmptyString(errors, path .. ".id", hotkey.id)
-  requireNonEmptyString(errors, path .. ".description", hotkey.description)
-  if requireTable(errors, path .. ".mods", hotkey.mods) then
-    validateModifiers(errors, path .. ".mods", hotkey.mods)
-  end
-  if requireNonEmptyString(errors, path .. ".key", hotkey.key) then
-    validateKnownKey(errors, path .. ".key", hotkey.key)
-  end
 end
 
 local function validateRootFields(errors, config)
@@ -155,7 +103,7 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
     if requireTable(errors, "config.controlLayer.arrows", config.controlLayer.arrows) then
       for index, binding in ipairs(config.controlLayer.arrows) do
         local path = string.format("config.controlLayer.arrows[%d]", index)
-        validateHotkey(errors, path, binding, hotkeys)
+        collectHotkey(path, binding, hotkeys)
         if type(binding) == "table"
           and requireNonEmptyString(errors, path .. ".arrow", binding.arrow)
         then
@@ -182,13 +130,13 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
   end
 
   if valid.reload then
-    validateHotkey(errors, "config.reload", config.reload, hotkeys)
+    collectHotkey("config.reload", config.reload, hotkeys)
   end
 
   if valid.appSwitchers then
     for index, binding in ipairs(config.appSwitchers) do
       local path = string.format("config.appSwitchers[%d]", index)
-      validateHotkey(errors, path, binding, hotkeys)
+      collectHotkey(path, binding, hotkeys)
       if type(binding) == "table" then
         requireNonEmptyString(errors, path .. ".appName", binding.appName)
         if binding.dirToOpen ~= nil and type(binding.dirToOpen) ~= "string" then
@@ -199,63 +147,7 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
   end
 
   if valid.unicodeConverter then
-    validateHotkey(errors, "config.unicodeConverter", config.unicodeConverter, hotkeys)
-  end
-end
-
-local function hotkeyIdentity(hotkey)
-  if type(hotkey.mods) ~= "table" or type(hotkey.key) ~= "string" or hotkey.key == "" then
-    return nil
-  end
-
-  local mods = {}
-  for _, mod in ipairs(hotkey.mods) do
-    if type(mod) ~= "string" or mod == "" then return nil end
-    local normalized = MOD_ALIASES[string.lower(mod)] or string.lower(mod)
-    table.insert(mods, normalized)
-  end
-  table.sort(mods, function(a, b)
-    local aOrder = MOD_ORDER[a] or 100
-    local bOrder = MOD_ORDER[b] or 100
-    if aOrder == bOrder then return a < b end
-    return aOrder < bOrder
-  end)
-  table.insert(mods, string.lower(hotkey.key))
-  return table.concat(mods, "+")
-end
-
-local function validateHotkeyDuplicates(errors, hotkeys)
-  local ids = {}
-  local identities = {}
-
-  for _, entry in ipairs(hotkeys) do
-    local hotkey = entry.value
-    if type(hotkey.id) == "string" and hotkey.id ~= "" then
-      if ids[hotkey.id] then
-        addError(
-          errors,
-          entry.path .. ".id",
-          string.format("duplicates %s.id: %s", ids[hotkey.id], hotkey.id)
-        )
-      else
-        ids[hotkey.id] = entry.path
-      end
-    end
-
-    if hotkey.enabled ~= false then
-      local identity = hotkeyIdentity(hotkey)
-      if identity then
-        if identities[identity] then
-          addError(
-            errors,
-            entry.path,
-            string.format("duplicates Hotkey Identity %s from %s", identity, identities[identity])
-          )
-        else
-          identities[identity] = entry.path
-        end
-      end
-    end
+    collectHotkey("config.unicodeConverter", config.unicodeConverter, hotkeys)
   end
 end
 
@@ -268,7 +160,9 @@ function M.validate(config)
     local valid = validateRootFields(errors, config)
     local hotkeys = {}
     validateFeatureShapes(errors, config, valid, hotkeys)
-    validateHotkeyDuplicates(errors, hotkeys)
+    for _, message in ipairs(hotkeyRegistry.validationErrors(hotkeys)) do
+      table.insert(errors, message)
+    end
   end
 
   if #errors > 0 then

@@ -22,6 +22,10 @@ local function buildMapping(mapping)
   }
 end
 
+function M.supportsKey(key)
+  return hidUsage[key] ~= nil
+end
+
 function M.apply(config)
   if not config or config.enabled == false then return end
 
