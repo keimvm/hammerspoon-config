@@ -143,6 +143,9 @@ test.test("Command key は左右同時押しを chord として扱い単体押�
   test.equal(0, #state.keyStrokes)
 
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+
+  test.equal(0, #state.keyStrokes)
+
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = false }))
 
   test.equal(1, #state.keyStrokes)
@@ -164,6 +167,37 @@ test.test("Command key は eventtap 開始時の unmatched release を無視す�
   local tap = state.eventtaps[1]
   local types = hs.eventtap.event.types
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = false }))
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+
+  test.equal(0, #state.keyStrokes)
+
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = false }))
+
+  test.equal(1, #state.keyStrokes)
+  test.equal(0x66, state.keyStrokes[1].key)
+end)
+
+test.test("Command key は bind 時の押下状態を全解除後に同期する", function()
+  local hs, state = fakeHs.new()
+  state.keyboardModifiers = { cmd = true }
+  _G.hs = hs
+  test.resetModule("modules.command_keys")
+
+  require("modules.command_keys").bind({
+    enabled = true,
+    bindings = {
+      { commandKey = "cmd", outputKeyCode = 0x66 },
+      { commandKey = "rightcmd", outputKeyCode = 0x68 },
+    },
+  })
+
+  local tap = state.eventtaps[1]
+  local types = hs.eventtap.event.types
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.rightcmd, { cmd = false }))
+
+  test.equal(0, #state.keyStrokes)
+
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
 
   test.equal(0, #state.keyStrokes)

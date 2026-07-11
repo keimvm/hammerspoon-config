@@ -46,11 +46,19 @@ function M.bind(config)
     types.rightMouseDown,
     types.otherMouseDown,
   }
+  local synchronized = not eventtap.checkKeyboardModifiers().cmd
 
   tap = eventtap.new(watchedTypes, function(e)
+    local eventType = e:getType()
+    if not synchronized then
+      if eventType == types.flagsChanged and not e:getFlags().cmd then
+        synchronized = true
+      end
+      return false
+    end
+
     if isIgnored(e, config.ignoredEventSourceUserData) then return false end
 
-    local eventType = e:getType()
     local keyCode = e:getKeyCode()
     local state = states[keyCode]
 

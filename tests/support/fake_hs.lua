@@ -74,6 +74,7 @@ function M.new()
     timers = {},
     pasteboardText = "",
     operations = {},
+    keyboardModifiers = {},
   }
 
   local hs = {
@@ -234,6 +235,10 @@ function M.new()
 
   function hs.eventtap.keyStroke(mods, key, delay)
     table.insert(state.keyStrokes, { mods = mods, key = key, delay = delay })
+  end
+
+  function hs.eventtap.checkKeyboardModifiers()
+    return state.keyboardModifiers
   end
 
   function hs.eventtap.new(watchedTypes, callback)
