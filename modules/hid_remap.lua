@@ -27,11 +27,13 @@ function M.supportsKey(key)
 end
 
 function M.apply(config)
-  if not config or config.enabled == false then return end
+  if not config then return end
 
   local userKeyMapping = {}
-  for _, mapping in ipairs(config.mappings or {}) do
-    table.insert(userKeyMapping, buildMapping(mapping))
+  if config.enabled ~= false then
+    for _, mapping in ipairs(config.mappings or {}) do
+      table.insert(userKeyMapping, buildMapping(mapping))
+    end
   end
 
   local payload = hs.json.encode({ UserKeyMapping = userKeyMapping })

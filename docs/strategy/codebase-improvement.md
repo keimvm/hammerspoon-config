@@ -85,6 +85,15 @@ config validation は最初の不備で停止せず、検出した不備を fiel
 
 これにより、一度の automated verification または reload で修正箇所をまとめて把握できるようにする。
 
+### 2026-07-11: Input Remap の lifecycle 評価
+
+M3 では、各 feature module の現行 interface から lifecycle、side effect、cleanup を検証した。確認できた risk は feature 内に閉じる次の2件だった。
+
+- HID mapping を無効化しても OS に既存 mapping が残る cleanup 漏れ。
+- 左右 Command key を同時に使うと、aggregate な `cmd` flag だけでは片側の release を識別できず、単体押し判定の状態が残る問題。
+
+HID mapping は明示的な無効化時に空の `UserKeyMapping` を適用し、Command key は key ごとの `flagsChanged` event で状態を遷移させる。Control layer を含む3 module 間には、共有 state、必須の呼び出し順、共通 cleanup は確認されなかった。そのため、feature module を維持し、共通 lifecycle module は追加しない。
+
 ### 2026-07-11: App Switcher の検証 seam
 
 最初に現在の `toggleOrCycle(appName, dirToOpen)` interface を fake `hs` 経由でテストする。未起動時の launch、frontmost 時の hide、非 frontmost 時の focus、window cycle、window がない場合の reopen、`dirToOpen` 失敗時の fallback をこの interface から検証する。

@@ -12,9 +12,14 @@ local function isIgnored(e, ignoredUserData)
 end
 
 local function markUsed(states)
+  local marked = false
   for _, state in pairs(states) do
-    if state.down then state.used = true end
+    if state.down then
+      state.used = true
+      marked = true
+    end
   end
+  return marked
 end
 
 function M.bind(config)
@@ -48,12 +53,11 @@ function M.bind(config)
     local state = states[keyCode]
 
     if eventType == types.flagsChanged and state then
-      local isDown = e:getFlags().cmd
-
-      if isDown and not state.down then
+      if not state.down then
+        local isChord = markUsed(states)
         state.down = true
-        state.used = false
-      elseif not isDown and state.down then
+        state.used = isChord
+      else
         state.down = false
 
         if not state.used then

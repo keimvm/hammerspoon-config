@@ -25,6 +25,65 @@ test.test("HID mapping は現在の modifier remap を hidutil に適用する",
   test.equal(0x7000000E3, mappings[2].HIDKeyboardModifierMappingDst)
 end)
 
+test.test("HID mapping は無効化時に残存する modifier remap を解除する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hid_remap")
+
+  require("modules.hid_remap").apply({
+    enabled = false,
+    mappings = {
+      { from = "caps_lock", to = "left_control" },
+      { from = "left_control", to = "left_command" },
+    },
+  })
+
+  test.equal(1, #state.tasks)
+  test.equal(true, state.tasks[1].started)
+  test.equal(0, #state.jsonValues[1].UserKeyMapping)
+end)
+
+test.test("HID mapping は hidutil task の生成失敗を記録する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hid_remap")
+  hs.task.new = function() return nil end
+
+  require("modules.hid_remap").apply({ enabled = true, mappings = {} })
+
+  test.equal(1, #state.logs)
+  test.equal("failed to create hidutil task", state.logs[1].message)
+end)
+
+test.test("HID mapping は hidutil task の開始失敗を記録する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hid_remap")
+  local newTask = hs.task.new
+  hs.task.new = function(...)
+    local task = newTask(...)
+    function task:start() return false end
+    return task
+  end
+
+  require("modules.hid_remap").apply({ enabled = true, mappings = {} })
+
+  test.equal(1, #state.logs)
+  test.equal("failed to start hidutil task", state.logs[1].message)
+end)
+
+test.test("HID mapping は hidutil の非ゼロ終了を記録する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hid_remap")
+
+  require("modules.hid_remap").apply({ enabled = true, mappings = {} })
+  state.tasks[1].callback(1, "", "permission denied")
+
+  test.equal(1, #state.logs)
+  test.equal("hidutil failed: permission denied", state.logs[1].message)
+end)
+
 test.test("Command key は単体押しだけを入力切替に変換する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs
@@ -58,6 +117,50 @@ test.test("Command key は単体押しだけを入力切替に変換する", fun
 
   test.equal(1, #state.keyStrokes)
   test.equal(0x68, state.keyStrokes[1].key)
+end)
+
+test.test("Command key は左右同時押しを chord として扱い単体押しへ復旧する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.command_keys")
+
+  require("modules.command_keys").bind({
+    enabled = true,
+    bindings = {
+      { commandKey = "cmd", outputKeyCode = 0x66 },
+      { commandKey = "rightcmd", outputKeyCode = 0x68 },
+    },
+  })
+
+  local tap = state.eventtaps[1]
+  local types = hs.eventtap.event.types
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.rightcmd, { cmd = true }))
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.rightcmd, { cmd = false }))
+
+  test.equal(0, #state.keyStrokes)
+
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = false }))
+
+  test.equal(1, #state.keyStrokes)
+  test.equal(0x66, state.keyStrokes[1].key)
+end)
+
+test.test("Command key は無効時に eventtap を開始しない", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.command_keys")
+
+  require("modules.command_keys").bind({
+    enabled = false,
+    bindings = {
+      { commandKey = "cmd", outputKeyCode = 0x66 },
+    },
+  })
+
+  test.equal(0, #state.eventtaps)
 end)
 
 test.test("Control arrow は押下と長押し repeat で同じ arrow を送信する", function()
@@ -114,4 +217,5 @@ test.test("Control arrow は押下と長押し repeat で同じ arrow を送信�
   test.equal("down", state.keyStrokes[6].key)
   test.equal("right", state.keyStrokes[7].key)
   test.equal("right", state.keyStrokes[8].key)
+  test.equal(0, #state.eventtaps)
 end)

@@ -35,11 +35,13 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 ### Input Remap
 
 - [ ] `hidutil property --get 'UserKeyMapping'` に `caps_lock` → `left_control` と `left_control` → `left_command` の2 mapping がある。
+- [ ] `hidRemap.enabled = false` に変更して reload すると `UserKeyMapping` が空になり、`true` に戻して reload すると上記2 mapping が復旧する。
 - [ ] 物理 `caps_lock+i/j/k/l` がそれぞれ `up/left/down/right` として動く。
 - [ ] `caps_lock+i/j/k/l` の長押しで arrow が repeat する。
 - [ ] 物理 `left_control` を Command key として使える。
 - [ ] 左 Command key の単体押しで `英数`、右 Command key の単体押しで `かな` に切り替わる。
 - [ ] Command key を shortcut chord として使った場合、単体押しの入力切替が発火しない。
+- [ ] 左右 Command key を同時に押して離しても入力切替が発火せず、その後の左右それぞれの単体押しが動作する。
 
 ### Hotkey と App Switcher
 
