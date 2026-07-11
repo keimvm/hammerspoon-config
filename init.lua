@@ -100,7 +100,6 @@ local config = configOverride or {
       mods = { "ctrl" },
       key = "t",
     },
-    --{ appName = "Ghostty", mods = { "ctrl" }, key = "t", enabled = false },
     {
       id = "app-switcher.chatgpt",
       description = "ChatGPT を切り替える",
@@ -108,7 +107,6 @@ local config = configOverride or {
       mods = { "ctrl" },
       key = "r",
     },
-    --{ appName = "Zed", mods = { "ctrl" }, key = "r", enabled = false },
     {
       id = "app-switcher.google-chrome",
       description = "Google Chrome を切り替える",
@@ -123,8 +121,6 @@ local config = configOverride or {
       mods = { "ctrl" },
       key = "n",
     },
-    --{ appName = "iA Writer", mods = { "ctrl" }, key = "n", enabled = false },
-    --{ appName = "YouTube", mods = { "ctrl" }, key = "y", enabled = false },
   },
   unicodeConverter = {
     id = "unicode-converter.toggle",
