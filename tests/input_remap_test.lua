@@ -98,6 +98,7 @@ test.test("Command key は単体押しだけを入力切替に変換する", fun
   })
 
   local tap = state.eventtaps[1]
+  test.equal(true, tap.started)
   local types = hs.eventtap.event.types
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = false }))
@@ -142,6 +143,31 @@ test.test("Command key は左右同時押しを chord として扱い単体押�
   test.equal(0, #state.keyStrokes)
 
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = false }))
+
+  test.equal(1, #state.keyStrokes)
+  test.equal(0x66, state.keyStrokes[1].key)
+end)
+
+test.test("Command key は eventtap 開始時の unmatched release を無視する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.command_keys")
+
+  require("modules.command_keys").bind({
+    enabled = true,
+    bindings = {
+      { commandKey = "cmd", outputKeyCode = 0x66 },
+    },
+  })
+
+  local tap = state.eventtaps[1]
+  local types = hs.eventtap.event.types
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = false }))
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+
+  test.equal(0, #state.keyStrokes)
+
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = false }))
 
   test.equal(1, #state.keyStrokes)

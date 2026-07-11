@@ -11,15 +11,17 @@ local function isIgnored(e, ignoredUserData)
   return ignoredUserData and e:getProperty(props.eventSourceUserData) == ignoredUserData
 end
 
-local function markUsed(states)
-  local marked = false
+local function hasDownState(states)
   for _, state in pairs(states) do
-    if state.down then
-      state.used = true
-      marked = true
-    end
+    if state.down then return true end
   end
-  return marked
+  return false
+end
+
+local function markDownStatesUsed(states)
+  for _, state in pairs(states) do
+    if state.down then state.used = true end
+  end
 end
 
 function M.bind(config)
@@ -54,7 +56,10 @@ function M.bind(config)
 
     if eventType == types.flagsChanged and state then
       if not state.down then
-        local isChord = markUsed(states)
+        if not e:getFlags().cmd then return false end
+
+        local isChord = hasDownState(states)
+        markDownStatesUsed(states)
         state.down = true
         state.used = isChord
       else
@@ -69,12 +74,12 @@ function M.bind(config)
     end
 
     if eventType == types.flagsChanged then
-      markUsed(states)
+      markDownStatesUsed(states)
       return false
     end
 
     if eventType ~= types.flagsChanged then
-      markUsed(states)
+      markDownStatesUsed(states)
     end
 
     return false
