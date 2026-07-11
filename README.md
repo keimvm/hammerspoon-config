@@ -78,10 +78,12 @@ MarkEdit は `~/Desktop/memo` 配下の file をまとめて開く設定にな�
 
 ## 検証
 
-Lua syntax の確認:
+Automated Verification:
 
 ```sh
-luac -p init.lua modules/*.lua
+./scripts/check
 ```
 
-Hammerspoon を起動中なら、設定 reload 後に Console で error が出ていないことも確認します。
+この command は Lua syntax、production Lua file の tracked state、fake `hs` による behavior contract を検証します。
+
+Hammerspoon を使った実機確認は [`docs/verification.md`](docs/verification.md) の Manual Runtime Verification checklist に従います。
