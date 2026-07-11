@@ -14,6 +14,7 @@ macOS 用の個人 Hammerspoon 設定です。Hotkey の宣言は主に `init.lu
 - `modules/reload.lua`: reload 用 Hotkey の動作を定義します。
 - `modules/unicode_converter.lua`: 文字と Unicode code point を相互変換する chooser です。
 - `CONTEXT.md`: この repo で使う用語と設計上の境界をまとめています。
+- `docs/strategy/codebase-improvement.md`: 安全に変更できる codebase へ改善するための方針とマイルストーンです。
 
 ## 主な設定
 
@@ -49,10 +50,10 @@ macOS 用の個人 Hammerspoon 設定です。Hotkey の宣言は主に `init.lu
 | `ctrl+m` | MarkEdit |
 | `ctrl+f` | Finder |
 | `ctrl+o` | メール |
-| `ctrl+b` | Google Chrome |
+| `ctrl+b` | Safari |
 | `ctrl+t` | cmux |
-| `ctrl+r` | Codex |
-| `ctrl+g` | ChatGPT Atlas |
+| `ctrl+r` | ChatGPT |
+| `ctrl+g` | Google Chrome |
 | `ctrl+n` | Obsidian |
 
 MarkEdit は `~/Desktop/memo` 配下の file をまとめて開く設定になっています。
@@ -68,19 +69,61 @@ MarkEdit は `~/Desktop/memo` 配下の file をまとめて開く設定にな�
 - `0x1F600` -> `😀`
 - `3042` -> `あ`
 
-## 変更するとき
+## App Switcher の設定を変更するとき
 
-- Hotkey や app 名などの設定値は、まず `init.lua` を変更します。
-- 機能の処理は `modules/` に置き、`init.lua` には大きな実装を増やさない方針です。
-- 一時的に機能を止めたい場合は、削除せず `enabled = false` で opt-out できる形を優先します。
-- Hotkey を追加するときは `id` と `description` を付けます。`modules/hotkey_registry.lua` が重複を検出します。
+App Switcher の設定値は `init.lua` の `config.appSwitchers` で管理します。各 entry は次の形です。
+
+```lua
+{
+  id = "app-switcher.safari",
+  description = "Safari を切り替える",
+  appName = "Safari",
+  mods = { "ctrl" },
+  key = "b",
+  enabled = true,
+  -- dirToOpen = home .. "/Desktop/memo",
+},
+```
+
+| Field | 意味 |
+| --- | --- |
+| `id` | repo 内で Hotkey を識別する一意な文字列。app や用途が分かる名前にします。 |
+| `description` | Hotkey の目的を表す説明。重複 error の特定にも使われます。 |
+| `appName` | Hammerspoon が起動・検索する macOS app 名。通常は `.app` を除いた名前です。 |
+| `mods` | modifier key の配列。例: `{ "ctrl" }`、`{ "cmd", "shift" }`。 |
+| `key` | modifier と組み合わせる key。例: `"b"`。 |
+| `enabled` | `false` のとき Hotkey を登録しません。省略時と `true` は有効です。 |
+| `dirToOpen` | 任意。未起動時に指定 directory 直下の file を対象 app で開きます。利用できない場合は通常起動へ fallback します。 |
+
+`appName` は `/Applications` または `~/Applications` にある app bundle 名に合わせます。たとえば `/Applications/ChatGPT.app` なら `appName = "ChatGPT"` です。名前が分からない場合は Finder で app を選び、表示名または bundle の file 名を確認してください。`ChatGPT` と `ChatGPT Atlas` のように別 bundle の app は同じものとして扱いません。
+
+変更方法は次の通りです。
+
+- 既存の割り当てを変更する: 対象 entry の `id`、`description`、`appName`、`mods`、`key` を新しい組み合わせにそろえます。必要な場合だけ `dirToOpen` も変更します。
+- 新しい割り当てを追加する: 既存 entry を 1 件コピーして `config.appSwitchers` 内へ追加し、一意な `id` と未使用の `mods` + `key` を設定します。
+- 一時的に無効化する: 対象 entry に `enabled = false` を追加します。再度使うときは `true` に戻すか field を削除します。
+- 完全に削除する: 対象の `{ ... }` entry 全体を `config.appSwitchers` から削除します。使わない設定を disabled entry やコメントとして残す必要はありません。
+
+`mods` の順序が違っても、同じ modifier と `key` の組み合わせは同じ **Hotkey Identity** です。有効な entry 間で Hotkey Identity が重複すると、Config Preflight が reload を拒否し、途中まで新しい Hotkey を登録することもありません。Console の `duplicates Hotkey Identity` error に表示された field path を直してから、もう一度 reload してください。
 
 ## 検証
 
-Lua syntax の確認:
+変更後は Automated Verification、Manual Runtime Verification の順で実行します。まず repo root で次を実行します。
 
 ```sh
-luac -p init.lua modules/*.lua
+./scripts/check
 ```
 
-Hammerspoon を起動中なら、設定 reload 後に Console で error が出ていないことも確認します。
+この command は Lua syntax、production Lua file の tracked state、fake `hs` による behavior contract を検証します。
+
+成功したら次を実機で確認します。
+
+1. Hammerspoon menu の **Reload Config** を実行する。
+2. Hammerspoon Console に error がないことを確認する。Config Preflight error が出た場合は、表示された field path を修正してから再度 **Reload Config** を実行する。
+3. 対象 app を終了し、App Switcher Hotkey で正しい app が起動することを確認する。
+4. 対象 app が frontmost の状態で同じ Hotkey を押し、app が hide されることを確認する。
+5. 対象 app が起動中かつ非 frontmost の状態で同じ Hotkey を押し、focus されることを確認する。
+6. 対象 app に複数 window がある場合、同じ Hotkey で focus 対象が cycle することを確認する。
+7. `dirToOpen` を設定した場合、directory が利用できると file が開き、利用できなくても app が通常起動することを確認する。
+
+現在の既定割り当てを変更した場合は、少なくとも `ctrl+b` の Safari、`ctrl+g` の Google Chrome、`ctrl+r` の `ChatGPT.app` で上記を確認します。全機能の実機 checklist は [`docs/verification.md`](docs/verification.md) にあります。

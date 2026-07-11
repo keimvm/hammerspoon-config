@@ -11,7 +11,14 @@ local function isIgnored(e, ignoredUserData)
   return ignoredUserData and e:getProperty(props.eventSourceUserData) == ignoredUserData
 end
 
-local function markUsed(states)
+local function hasDownState(states)
+  for _, state in pairs(states) do
+    if state.down then return true end
+  end
+  return false
+end
+
+local function markDownStatesUsed(states)
   for _, state in pairs(states) do
     if state.down then state.used = true end
   end
@@ -39,21 +46,31 @@ function M.bind(config)
     types.rightMouseDown,
     types.otherMouseDown,
   }
+  local synchronized = not eventtap.checkKeyboardModifiers().cmd
 
   tap = eventtap.new(watchedTypes, function(e)
+    local eventType = e:getType()
+    if not synchronized then
+      if eventType == types.flagsChanged and not e:getFlags().cmd then
+        synchronized = true
+      end
+      return false
+    end
+
     if isIgnored(e, config.ignoredEventSourceUserData) then return false end
 
-    local eventType = e:getType()
     local keyCode = e:getKeyCode()
     local state = states[keyCode]
 
     if eventType == types.flagsChanged and state then
-      local isDown = e:getFlags().cmd
+      if not state.down then
+        if not e:getFlags().cmd then return false end
 
-      if isDown and not state.down then
+        local isChord = hasDownState(states)
+        markDownStatesUsed(states)
         state.down = true
-        state.used = false
-      elseif not isDown and state.down then
+        state.used = isChord
+      else
         state.down = false
 
         if not state.used then
@@ -65,12 +82,12 @@ function M.bind(config)
     end
 
     if eventType == types.flagsChanged then
-      markUsed(states)
+      markDownStatesUsed(states)
       return false
     end
 
     if eventType ~= types.flagsChanged then
-      markUsed(states)
+      markDownStatesUsed(states)
     end
 
     return false

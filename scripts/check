@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -eu
+
+repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$repo_root"
+
+luac -p init.lua modules/*.lua tests/*.lua tests/support/*.lua
+
+for file in init.lua modules/*.lua; do
+  if ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
+    echo "untracked production Lua file: $file" >&2
+    exit 1
+  fi
+done
+
+lua tests/run.lua
+
+echo "Automated Verification passed."

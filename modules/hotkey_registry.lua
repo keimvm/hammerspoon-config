@@ -17,14 +17,16 @@ local MOD_ORDER = {
   fn = 5,
 }
 
+local VALID_MODIFIERS = {
+  alt = true,
+  cmd = true,
+  ctrl = true,
+  fn = true,
+  shift = true,
+}
+
 local function enabled(hotkey)
   return hotkey.enabled ~= false
-end
-
-local function requireNonEmptyString(value, fieldName, hotkeyId)
-  if type(value) ~= "string" or value == "" then
-    error(string.format("hotkey %s must have a non-empty %s", tostring(hotkeyId or "<unknown>"), fieldName), 3)
-  end
 end
 
 local function normalizeMod(mod)
@@ -32,31 +34,13 @@ local function normalizeMod(mod)
   return MOD_ALIASES[normalized] or normalized
 end
 
-local function normalizeMods(mods, hotkeyId)
-  if mods == nil then return {} end
-  if type(mods) ~= "table" then
-    error(string.format("hotkey %s mods must be a table", tostring(hotkeyId or "<unknown>")), 3)
-  end
-
-  local normalized = {}
-  for _, mod in ipairs(mods) do
-    requireNonEmptyString(mod, "mod", hotkeyId)
-    table.insert(normalized, normalizeMod(mod))
-  end
-
-  table.sort(normalized, function(a, b)
+local function sortModifiers(mods)
+  table.sort(mods, function(a, b)
     local aOrder = MOD_ORDER[a] or 100
     local bOrder = MOD_ORDER[b] or 100
     if aOrder == bOrder then return a < b end
     return aOrder < bOrder
   end)
-
-  return normalized
-end
-
-local function normalizeKey(key, hotkeyId)
-  requireNonEmptyString(key, "key", hotkeyId)
-  return string.lower(key)
 end
 
 local function formatHotkey(mods, key)
@@ -66,32 +50,141 @@ local function formatHotkey(mods, key)
   return table.concat(parts, "+")
 end
 
-local function validateMetadata(hotkey)
+local function addDefinitionError(errors, path, message)
+  table.insert(errors, string.format("%s %s", path, message))
+end
+
+function M.isKnownKey(key)
+  if type(key) ~= "string" or key == "" then return false end
+  local keycodes = hs and hs.keycodes and hs.keycodes.map or {}
+  return keycodes[key] ~= nil or keycodes[string.lower(key)] ~= nil
+end
+
+function M.isKnownModifier(mod)
+  if type(mod) ~= "string" or mod == "" then return false end
+  return VALID_MODIFIERS[normalizeMod(mod)] == true
+end
+
+local function validateDefinition(errors, entry)
+  local path = entry.path
+  local hotkey = entry.value
   if type(hotkey) ~= "table" then
-    error("hotkey metadata must be a table", 3)
+    addDefinitionError(errors, path, "must be a table")
+    return nil
   end
 
-  requireNonEmptyString(hotkey.id, "id", hotkey.id)
-  requireNonEmptyString(hotkey.description, "description", hotkey.id)
+  if hotkey.enabled ~= nil and type(hotkey.enabled) ~= "boolean" then
+    addDefinitionError(errors, path .. ".enabled", "must be a boolean")
+  end
+  if type(hotkey.id) ~= "string" or hotkey.id == "" then
+    addDefinitionError(errors, path .. ".id", "must be a non-empty string")
+  end
+  if type(hotkey.description) ~= "string" or hotkey.description == "" then
+    addDefinitionError(errors, path .. ".description", "must be a non-empty string")
+  end
 
-  local mods = normalizeMods(hotkey.mods, hotkey.id)
-  local key = normalizeKey(hotkey.key, hotkey.id)
-  return mods, key
+  local identityValid = true
+  local normalizedMods = {}
+  if type(hotkey.mods) ~= "table" then
+    addDefinitionError(errors, path .. ".mods", "must be a table")
+    identityValid = false
+  else
+    for index, mod in ipairs(hotkey.mods) do
+      local itemPath = string.format("%s.mods[%d]", path, index)
+      if type(mod) ~= "string" or mod == "" then
+        addDefinitionError(errors, itemPath, "must be a non-empty string")
+        identityValid = false
+      else
+        if not M.isKnownModifier(mod) then
+          addDefinitionError(errors, itemPath, "is unknown: " .. mod)
+          identityValid = false
+        else
+          table.insert(normalizedMods, normalizeMod(mod))
+        end
+      end
+    end
+  end
+
+  local normalizedKey
+  if type(hotkey.key) ~= "string" or hotkey.key == "" then
+    addDefinitionError(errors, path .. ".key", "must be a non-empty string")
+    identityValid = false
+  elseif not M.isKnownKey(hotkey.key) then
+    addDefinitionError(errors, path .. ".key", "is unknown: " .. hotkey.key)
+    identityValid = false
+  else
+    normalizedKey = string.lower(hotkey.key)
+  end
+
+  if not identityValid then return nil end
+  sortModifiers(normalizedMods)
+  return formatHotkey(normalizedMods, normalizedKey)
+end
+
+function M.validationErrors(entries)
+  local errors = {}
+  local ids = {}
+  local identities = {}
+
+  for _, entry in ipairs(entries) do
+    local identity = validateDefinition(errors, entry)
+    local hotkey = entry.value
+    if type(hotkey) == "table" then
+      if type(hotkey.id) == "string" and hotkey.id ~= "" then
+        if ids[hotkey.id] then
+          addDefinitionError(
+            errors,
+            entry.path .. ".id",
+            string.format("duplicates %s.id: %s", ids[hotkey.id], hotkey.id)
+          )
+        else
+          ids[hotkey.id] = entry.path
+        end
+      end
+
+      if identity and hotkey.enabled ~= false then
+        if identities[identity] then
+          addDefinitionError(
+            errors,
+            entry.path,
+            string.format("duplicates Hotkey Identity %s from %s", identity, identities[identity])
+          )
+        else
+          identities[identity] = entry.path
+        end
+      end
+    end
+  end
+
+  return errors
 end
 
 function M.new()
   return setmetatable({ hotkeys = {} }, Registry)
 end
 
-function Registry:bind(hotkey, callback)
-  local mods, key = validateMetadata(hotkey)
+local function requireOptionalFunction(value, fieldName, hotkeyId)
+  if value ~= nil and type(value) ~= "function" then
+    error(string.format("hotkey %s %s must be a function", tostring(hotkeyId or "<unknown>"), fieldName), 3)
+  end
+end
+
+function Registry:bind(hotkey, pressedFn, releasedFn, repeatFn)
+  local id = type(hotkey) == "table" and hotkey.id or "<unknown>"
+  local errors = {}
+  local identity = validateDefinition(errors, {
+    path = "hotkey " .. tostring(id),
+    value = hotkey,
+  })
+  if #errors > 0 then error(errors[1], 2) end
   if not enabled(hotkey) then return nil end
 
-  if type(callback) ~= "function" then
-    error(string.format("hotkey %s callback must be a function", hotkey.id), 2)
+  if type(pressedFn) ~= "function" then
+    error(string.format("hotkey %s pressedFn must be a function", hotkey.id), 2)
   end
+  requireOptionalFunction(releasedFn, "releasedFn", hotkey.id)
+  requireOptionalFunction(repeatFn, "repeatFn", hotkey.id)
 
-  local identity = formatHotkey(mods, key)
   local existing = self.hotkeys[identity]
   if existing then
     error(
@@ -112,7 +205,7 @@ function Registry:bind(hotkey, callback)
     description = hotkey.description,
   }
 
-  return hs.hotkey.bind(hotkey.mods or {}, hotkey.key, callback)
+  return hs.hotkey.bind(hotkey.mods, hotkey.key, pressedFn, releasedFn, repeatFn)
 end
 
 return M
