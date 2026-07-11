@@ -17,8 +17,8 @@ end
 
 local function getFilesInDirectory(dirPath)
   local files = {}
-  local iter, dirObj = hs.fs.dir(dirPath)
-  if not iter then
+  local ok, iter, dirObj = pcall(hs.fs.dir, dirPath)
+  if not ok or not iter then
     hs.alert.show("ディレクトリが見つかりません: " .. dirPath)
     return files
   end

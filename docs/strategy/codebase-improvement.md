@@ -100,6 +100,12 @@ HID mapping は明示的な無効化時に空の `UserKeyMapping` を適用し�
 
 現行 interface からのテストが不自然または過度に複雑だと確認できた場合だけ、window selection などの decision logic に internal seam を追加する。テストのためだけに runtime adapter や public method を先に増やさない。
 
+### 2026-07-11: App Switcher の testability 評価
+
+M4 では、`toggleOrCycle(appName, dirToOpen)` から launch、hide、focus、stable window cycle、reopen、directory fallback を自然に検証できた。追加の test setup は system boundary にある `hs.fs.dir` の fake だけであり、window selection の internal seam や public diagnostic method は追加しない。
+
+Manual Runtime Verification では、実 Hammerspoon の `hs.fs.dir` が利用できない directory に対して `nil` ではなく error を返すことを確認した。module 内でこの error を吸収して通常 launch へ fallback し、fake `hs` も同じ error mode を再現する。runtime 固有の error mode を外部 interface へ漏らさず、既存の user-visible behavior を維持する。
+
 ## マイルストーン
 
 ### M1: Verification Baseline

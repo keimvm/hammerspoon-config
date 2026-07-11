@@ -42,6 +42,11 @@ test.test("App Switcher は非 frontmost app の window を stable order で cyc
 
   local appSwitcher = require("modules.app_switcher")
   appSwitcher.toggleOrCycle("Codex")
+
+  test.equal(true, app.activated)
+  test.equal(1, first.focusCount)
+  test.equal(0, second.focusCount)
+
   app.frontmost = false
   appSwitcher.toggleOrCycle("Codex")
 
@@ -69,8 +74,11 @@ test.test("App Switcher は window がない app を reopen する", function()
   test.equal(1, reopenedWindow.focusCount)
 end)
 
-test.test("App Switcher は dirToOpen がない場合に通常 launch へ fallback する", function()
+test.test("App Switcher は dirToOpen が利用できない場合に通常 launch へ fallback する", function()
   local hs, state = fakeHs.new()
+  hs.fs.dir = function(dirPath)
+    error("cannot open " .. dirPath)
+  end
   _G.hs = hs
   test.resetModule("modules.app_switcher")
 
@@ -78,5 +86,25 @@ test.test("App Switcher は dirToOpen がない場合に通常 launch へ fallba
 
   test.equal(1, #state.alerts)
   test.contains(state.alerts[1], "/missing")
+  test.equal("MarkEdit", state.launchedApps[1])
+end)
+
+test.test("App Switcher は dirToOpen が空の場合に通常 launch へ fallback する", function()
+  local hs, state = fakeHs.new()
+  local entries = { ".", ".." }
+  local index = 0
+  hs.fs.dir = function()
+    return function()
+      index = index + 1
+      return entries[index]
+    end
+  end
+  _G.hs = hs
+  test.resetModule("modules.app_switcher")
+
+  require("modules.app_switcher").toggleOrCycle("MarkEdit", "/empty")
+
+  test.equal(0, #state.alerts)
+  test.equal(1, #state.launchedApps)
   test.equal("MarkEdit", state.launchedApps[1])
 end)
