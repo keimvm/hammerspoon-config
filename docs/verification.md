@@ -42,6 +42,7 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 - [ ] 左 Command key の単体押しで `英数`、右 Command key の単体押しで `かな` に切り替わる。
 - [ ] Command key を shortcut chord として使った場合、単体押しの入力切替が発火しない。
 - [ ] 左右 Command key を同時に押して離しても入力切替が発火せず、その後の左右それぞれの単体押しが動作する。
+- [ ] Command key を押したまま Hammerspoon を reload し、全 Command key を離すまでは入力切替が発火せず、その後の左右それぞれの単体押しが動作する。
 
 ### Hotkey と App Switcher
 
