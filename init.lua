@@ -6,6 +6,8 @@ local hidRemap = require("modules.hid_remap")
 local reload = require("modules.reload")
 local hotkeyRegistry = require("modules.hotkey_registry").new()
 
+hs.window.animationDuration = 0
+
 local home = os.getenv("HOME")
 local configOverride = ...
 
