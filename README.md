@@ -1,129 +1,126 @@
 # Hammerspoon Config
 
-macOS 用の個人 Hammerspoon 設定です。Hotkey の宣言は主に `init.lua` に置き、実際の動作は `modules/` 配下の Lua module に分けています。
+macOS 用の Hammerspoon 設定です。利用者が変更する設定値は `init.lua`、動作の実装は `modules/` に分けています。
 
-## 構成
+> [!IMPORTANT]
+> 初期設定では、読み込み時に物理 `caps_lock` を `left_control`、物理 `left_control` を `left_command` へ remap します。初回の **Reload Config** 前に、`init.lua` の `config.hidRemap` が自分の keyboard 環境に合うことを確認してください。
 
-- `init.lua`: 設定の入口。Hotkey、app switcher、入力変換の設定値を管理します。
-- `modules/hotkey_registry.lua`: Hotkey metadata の検証と重複検出を行います。
-- `modules/bindings.lua`: `init.lua` の設定を app switcher や Unicode converter に接続します。
-- `modules/app_switcher.lua`: app の起動、focus、hide、window cycle を扱います。
-- `modules/control_layer.lua`: `ctrl` layer の cursor 操作などを扱います。
-- `modules/command_keys.lua`: Command key 単体押しを `英数` / `かな` に変換します。
-- `modules/hid_remap.lua`: `hidutil` による modifier key remap を適用します。
-- `modules/reload.lua`: reload 用 Hotkey の動作を定義します。
-- `modules/unicode_converter.lua`: 文字と Unicode code point を相互変換する chooser です。
-- `CONTEXT.md`: この repo で使う用語と設計上の境界をまとめています。
-- `docs/strategy/codebase-improvement.md`: 安全に変更できる codebase へ改善するための方針とマイルストーンです。
+## セットアップ
 
-## 主な設定
+1. [Hammerspoon](https://www.hammerspoon.org/go/) をインストールします。Homebrew を使う場合は次を実行します。
 
-### 入力 remap
+   ```sh
+   brew install --cask hammerspoon
+   ```
 
-読み込み時に `hidutil` で次の modifier remap を適用します。
+2. この repo の内容を `~/.hammerspoon` に配置します。Hammerspoon は `~/.hammerspoon/init.lua` を読み込みます。
+3. Hammerspoon を起動する前に、後述の手順で `init.lua` を自分の環境に合わせます。
+4. Automated Verification に使う `lua` と `luac` がない場合はインストールします。
 
-- `caps_lock` -> `left_control`
-- `left_control` -> `left_command`
+   ```sh
+   brew install lua
+   ```
 
-また、Command key を単体で押して離した場合は JIS keyboard の入力切り替えとして扱います。
+5. Hammerspoon を起動して Accessibility access を許可し、「変更を反映・検証する」の手順を実行します。
 
-- `cmd` -> `英数` (`0x66`)
-- `rightcmd` -> `かな` (`0x68`)
+## 現在の操作
 
-### Control layer
+### Keyboard
 
-`ctrl` と home row で arrow key を送信します。
+| 操作                      | 動作                            |
+| ------------------------- | ------------------------------- |
+| 物理 `caps_lock`          | `left_control`                  |
+| 物理 `left_control`       | `left_command`                  |
+| 左 Command key の単体押し | `英数`                          |
+| 右 Command key の単体押し | `かな`                          |
+| `ctrl+i/j/k/l`            | `up/left/down/right`            |
+| `F5`                      | frontmost app へ `cmd+r` を送信 |
 
-| Hotkey | 動作 |
-| --- | --- |
-| `ctrl+i` | `up` |
-| `ctrl+j` | `left` |
-| `ctrl+k` | `down` |
-| `ctrl+l` | `right` |
+### App Switcher
 
-### App switcher
+App Switcher Hotkey は、対象 app が未起動なら起動、frontmost なら hide、それ以外なら focus します。複数 window がある場合は focus 対象を cycle します。
 
-`ctrl` + 1 key で app を起動、focus、hide、window cycle します。対象 app や key は `init.lua` の `appSwitchers` で管理します。
-
-| Hotkey | App |
-| --- | --- |
-| `ctrl+m` | MarkEdit |
-| `ctrl+f` | Finder |
-| `ctrl+o` | メール |
-| `ctrl+b` | Safari |
-| `ctrl+t` | cmux |
-| `ctrl+r` | ChatGPT |
+| Hotkey   | App           |
+| -------- | ------------- |
+| `ctrl+m` | MarkEdit      |
+| `ctrl+f` | Finder        |
+| `ctrl+o` | メール        |
+| `ctrl+b` | Safari        |
+| `ctrl+t` | cmux          |
+| `ctrl+r` | ChatGPT       |
 | `ctrl+g` | Google Chrome |
-| `ctrl+n` | Obsidian |
+| `ctrl+n` | Notion        |
 
-MarkEdit は `~/Desktop/memo` 配下の file をまとめて開く設定になっています。
+MarkEdit は、未起動時に `~/Desktop/memo` 直下の file をまとめて開きます。directory が利用できない場合は通常起動します。
 
-### Unicode converter
+### Unicode Converter
 
-`modules/unicode_converter.lua` は chooser で文字と Unicode code point を相互変換します。現在は `init.lua` の `unicodeConverter.enabled = false` で一時的に無効化しています。
-
-有効化すると `cmd+shift+u` で開き、入力例は次の通りです。
+初期設定では無効です。`config.unicodeConverter.enabled = true` にすると `cmd+shift+u` で開きます。
 
 - `あ` -> `U+3042`
-- `U+3042` -> `あ`
-- `0x1F600` -> `😀`
-- `3042` -> `あ`
+- `U+3042`、`0x3042`、`3042` -> `あ`
 
-## App Switcher の設定を変更するとき
+## 設定を変更する
 
-App Switcher の設定値は `init.lua` の `config.appSwitchers` で管理します。各 entry は次の形です。
+通常は `init.lua` の `config` だけを変更します。
 
-```lua
-{
-  id = "app-switcher.safari",
-  description = "Safari を切り替える",
-  appName = "Safari",
-  mods = { "ctrl" },
-  key = "b",
-  enabled = true,
-  -- dirToOpen = home .. "/Desktop/memo",
-},
+| 設定                         | 変更内容                                      |
+| ---------------------------- | --------------------------------------------- |
+| `config.hidRemap`            | modifier remap の ON/OFF と mapping           |
+| `config.commandKeys`         | Command key 単体押しの ON/OFF と出力 key code |
+| `config.controlLayer.arrows` | cursor 操作用 Hotkey                          |
+| `config.reload`              | frontmost app へ `cmd+r` を送る Hotkey        |
+| `config.appSwitchers`        | App Switcher の app、Hotkey、directory        |
+| `config.unicodeConverter`    | Unicode Converter の ON/OFF と Hotkey         |
+
+Hotkey の共通 field は、一意な `id`、用途を示す `description`、modifier 配列の `mods`、通常 key の `key` です。`enabled = false` を指定すると登録しません。
+
+### Modifier remap を変更する
+
+`config.hidRemap.enabled = false` にすると、reload 時にこの設定が適用した remap を解除します。mapping を変える場合は、`mappings` の `from` と `to` を編集します。現在指定できる key は `caps_lock`、`left_control`、`left_command` です。
+
+### App Switcher を変更する
+
+各 entry は共通 Hotkey field に加え、`.app` を除いた bundle 名を示す `appName` と、未起動時に開く任意の directory `dirToOpen` を使います。
+
+たとえば `ctrl+r` は変えず、対象を `/Applications/ChatGPT.app` から `/Applications/Codex.app` へ変更する場合は、既存 entry の3行だけを書き換えます。
+
+```diff
+ {
+-  id = "app-switcher.chatgpt",
+-  description = "ChatGPT を切り替える",
+-  appName = "ChatGPT",
++  id = "app-switcher.codex",
++  description = "Codex を切り替える",
++  appName = "Codex",
+   mods = { "ctrl" },
+   key = "r",
+ },
 ```
 
-| Field | 意味 |
-| --- | --- |
-| `id` | repo 内で Hotkey を識別する一意な文字列。app や用途が分かる名前にします。 |
-| `description` | Hotkey の目的を表す説明。重複 error の特定にも使われます。 |
-| `appName` | Hammerspoon が起動・検索する macOS app 名。通常は `.app` を除いた名前です。 |
-| `mods` | modifier key の配列。例: `{ "ctrl" }`、`{ "cmd", "shift" }`。 |
-| `key` | modifier と組み合わせる key。例: `"b"`。 |
-| `enabled` | `false` のとき Hotkey を登録しません。省略時と `true` は有効です。 |
-| `dirToOpen` | 任意。未起動時に指定 directory 直下の file を対象 app で開きます。利用できない場合は通常起動へ fallback します。 |
+- `appName` は実際の app bundle 名に合わせます。別名の app は別 bundle として扱います。
+- ショートカットも変える場合は `mods` と `key` を変更します。
+- 追加する場合は entry を複製し、`id` と `mods + key` を一意にします。
+- 一時的に止める場合は `enabled = false`、削除する場合は entry 全体を削除します。
+- 旧 app 専用の `dirToOpen` は、新しい app で不要なら削除します。
 
-`appName` は `/Applications` または `~/Applications` にある app bundle 名に合わせます。たとえば `/Applications/ChatGPT.app` なら `appName = "ChatGPT"` です。名前が分からない場合は Finder で app を選び、表示名または bundle の file 名を確認してください。`ChatGPT` と `ChatGPT Atlas` のように別 bundle の app は同じものとして扱いません。
+同じ `mods + key` を複数の有効な設定に使うと、Config Preflight が `duplicates Hotkey Identity` error を出して reload を中止します。新しい entry を追加するのではなく、既存の割り当てを置き換える場合は元の entry を編集してください。
 
-変更方法は次の通りです。
+### その他の Hotkey を変更する
 
-- 既存の割り当てを変更する: 対象 entry の `id`、`description`、`appName`、`mods`、`key` を新しい組み合わせにそろえます。必要な場合だけ `dirToOpen` も変更します。
-- 新しい割り当てを追加する: 既存 entry を 1 件コピーして `config.appSwitchers` 内へ追加し、一意な `id` と未使用の `mods` + `key` を設定します。
-- 一時的に無効化する: 対象 entry に `enabled = false` を追加します。再度使うときは `true` に戻すか field を削除します。
-- 完全に削除する: 対象の `{ ... }` entry 全体を `config.appSwitchers` から削除します。使わない設定を disabled entry やコメントとして残す必要はありません。
+`config.reload`、`config.controlLayer.arrows`、`config.unicodeConverter` の対象 entry で `mods` と `key` を変更します。既存の全 Hotkey と重複しない組み合わせを指定してください。Unicode Converter は `enabled` を `true` / `false` にして切り替えます。
 
-`mods` の順序が違っても、同じ modifier と `key` の組み合わせは同じ **Hotkey Identity** です。有効な entry 間で Hotkey Identity が重複すると、Config Preflight が reload を拒否し、途中まで新しい Hotkey を登録することもありません。Console の `duplicates Hotkey Identity` error に表示された field path を直してから、もう一度 reload してください。
+## 変更を反映・検証する
 
-## 検証
+1. repo root で `./scripts/check` を実行します。
+2. Hammerspoon menu の **Reload Config** を実行します。`F5` は Hammerspoon の reload ではありません。
+3. Console に error がないことを確認します。Config Preflight error がある場合は、表示された `config...` の field path を修正します。
+4. 変更した Hotkey と、その変更によって重複する可能性がある Hotkey を実機で確認します。
 
-変更後は Automated Verification、Manual Runtime Verification の順で実行します。まず repo root で次を実行します。
+App Switcher を変更した場合は、対象 app の起動、focus、hide、必要に応じて window cycle と `dirToOpen` を確認します。全機能の checklist は [`docs/verification.md`](docs/verification.md) を参照してください。
+
+modifier remap により操作できなくなった場合は、別の terminal または入力手段から次を実行して解除し、設定を修正してから reload します。
 
 ```sh
-./scripts/check
+hidutil property --set '{"UserKeyMapping":[]}'
 ```
-
-この command は Lua syntax、production Lua file の tracked state、fake `hs` による behavior contract を検証します。
-
-成功したら次を実機で確認します。
-
-1. Hammerspoon menu の **Reload Config** を実行する。
-2. Hammerspoon Console に error がないことを確認する。Config Preflight error が出た場合は、表示された field path を修正してから再度 **Reload Config** を実行する。
-3. 対象 app を終了し、App Switcher Hotkey で正しい app が起動することを確認する。
-4. 対象 app が frontmost の状態で同じ Hotkey を押し、app が hide されることを確認する。
-5. 対象 app が起動中かつ非 frontmost の状態で同じ Hotkey を押し、focus されることを確認する。
-6. 対象 app に複数 window がある場合、同じ Hotkey で focus 対象が cycle することを確認する。
-7. `dirToOpen` を設定した場合、directory が利用できると file が開き、利用できなくても app が通常起動することを確認する。
-
-現在の既定割り当てを変更した場合は、少なくとも `ctrl+b` の Safari、`ctrl+g` の Google Chrome、`ctrl+r` の `ChatGPT.app` で上記を確認します。全機能の実機 checklist は [`docs/verification.md`](docs/verification.md) にあります。

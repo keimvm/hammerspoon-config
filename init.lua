@@ -117,9 +117,9 @@ local config = configOverride or {
       key = "g",
     },
     {
-      id = "app-switcher.obsidian",
-      description = "Obsidian を切り替える",
-      appName = "Obsidian",
+      id = "app-switcher.notion",
+      description = "Notion を切り替える",
+      appName = "Notion",
       mods = { "ctrl" },
       key = "n",
     },
