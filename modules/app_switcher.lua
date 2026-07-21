@@ -94,6 +94,51 @@ local function getCandidateWindows(app)
   return wins
 end
 
+local function getCurrentSpaceCandidates(wins)
+  local ok, activeSpaces, err = pcall(hs.spaces.activeSpaces)
+  if not ok or not activeSpaces then
+    log.wf("active space lookup failed: %s", err or activeSpaces or "unknown error")
+    return nil
+  end
+
+  local activeSpaceIds = {}
+  for _, spaceId in pairs(activeSpaces) do
+    activeSpaceIds[spaceId] = true
+  end
+
+  local current = {}
+  for _, win in ipairs(wins) do
+    local spacesOk, windowSpaces, spacesErr = pcall(hs.spaces.windowSpaces, win)
+    if not spacesOk or not windowSpaces then
+      log.wf(
+        "window space lookup failed for %s: %s",
+        tostring(win:id()),
+        spacesErr or windowSpaces or "unknown error"
+      )
+      return nil
+    end
+
+    for _, spaceId in ipairs(windowSpaces) do
+      if activeSpaceIds[spaceId] then
+        table.insert(current, win)
+        break
+      end
+    end
+  end
+
+  return current
+end
+
+local function getPreferredCandidateWindows(app)
+  local wins = getCandidateWindows(app)
+  if #wins == 0 then return wins end
+
+  local current = getCurrentSpaceCandidates(wins)
+  if current and #current > 0 then return current end
+
+  return wins
+end
+
 local function nextIndexByLastId(wins, lastWinId)
   if #wins == 0 then return nil end
   if not lastWinId then return 1 end
@@ -158,7 +203,7 @@ local function focusNextWindowAfterReopen(appName)
     local key = stateKey(app, appName)
     appState[key] = appState[key] or { lastWinId = nil }
 
-    local wins = getCandidateWindows(app)
+    local wins = getPreferredCandidateWindows(app)
     local idx = nextIndexByLastId(wins, appState[key].lastWinId)
     if not idx then return end
 
@@ -185,10 +230,7 @@ function M.toggleOrCycle(appName, dirToOpen)
     return
   end
 
-  app:unhide()
-  app:activate(true)
-
-  local wins = getCandidateWindows(app)
+  local wins = getPreferredCandidateWindows(app)
 
   if #wins == 0 then
     reopenApp(app)

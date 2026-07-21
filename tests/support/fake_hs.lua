@@ -6,6 +6,7 @@ function M.window(id, options)
     focusCount = 0,
     minimized = options.minimized == true,
     raiseCount = 0,
+    spaces = options.spaces or { 1 },
     standard = options.standard ~= false,
   }
 
@@ -42,6 +43,7 @@ function M.app(name, options)
   function app:activate()
     self.activated = true
     self.frontmost = true
+    if options.onActivate then options.onActivate(self) end
   end
 
   return app
@@ -75,6 +77,7 @@ function M.new()
     pasteboardText = "",
     operations = {},
     keyboardModifiers = {},
+    activeSpaces = { main = 1 },
   }
 
   local hs = {
@@ -102,8 +105,10 @@ function M.new()
     logger = {},
     osascript = {},
     pasteboard = {},
+    spaces = {},
     task = {},
     timer = {},
+    window = {},
   }
 
   local keycodes = {
@@ -159,6 +164,14 @@ function M.new()
   function hs.application.launchOrFocus(appName)
     table.insert(state.launchedApps, appName)
     return true
+  end
+
+  function hs.spaces.activeSpaces()
+    return state.activeSpaces
+  end
+
+  function hs.spaces.windowSpaces(window)
+    return window.spaces
   end
 
   function hs.alert.show(message)

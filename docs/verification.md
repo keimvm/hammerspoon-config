@@ -48,9 +48,13 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 
 - [ ] `F5` が frontmost app へ `cmd+r` を送信する現在の behavior を維持する。
 - [ ] 対象 app が未起動の場合、App Switcher Hotkey で起動する。
-- [ ] frontmost app で同じ Hotkey を押すと hide する。
-- [ ] 非 frontmost app で同じ Hotkey を押すと focus する。
-- [ ] 複数 window がある app で focus 対象が cycle する。
+- [ ] frontmost app で同じ Hotkey を押すと、別 Space の window を含む app 全体を hide する。
+- [ ] 対象 app の window を Space 1 と Space 2 に用意し、非 frontmost の状態から各 Space で Hotkey を押すと同じ Space の window を focus する。
+- [ ] 現在の Space に対象 app の複数 window がある場合、別 Space へ移動せず現在の Space 内だけで focus 対象が cycle する。
+- [ ] app を hide して別 Space へ移動した後、Hotkey で移動先 Space の window を表示する。
+- [ ] 現在の Space の対象 window が minimized の場合、別 Space の window より優先して復帰する。
+- [ ] 現在の Space に対象 window がない場合だけ、別 Space の window へ移動する。
+- [ ] 複数 display を使う場合、どの display でも現在表示中の Space にある window を優先する。
 - [ ] MarkEdit の directory が利用できない場合でも通常起動へ fallback する。
 
 ### Unicode Converter

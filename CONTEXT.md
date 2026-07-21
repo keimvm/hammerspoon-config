@@ -21,7 +21,7 @@ _Avoid_: Binding key, shortcut id
 _Avoid_: Hotkey config, shortcut setting
 
 **App Switcher**:
-Desired Hotkey に対応する macOS app を起動、focus、hide、または window cycle する feature。対象 app と Hotkey の選択は `init.lua` の設定が表す。
+Desired Hotkey に対応する macOS app を起動、focus、hide、または window cycle する feature。window cycle は各 display で現在表示中の Space を優先し、対象 window がない場合だけ全 Space を対象にする。対象 app と Hotkey の選択は `init.lua` の設定が表す。
 _Avoid_: App launcher
 
 **Input Remap**:

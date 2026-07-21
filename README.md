@@ -38,7 +38,7 @@ macOS 用の Hammerspoon 設定です。利用者が変更する設定値は `in
 
 ### App Switcher
 
-App Switcher Hotkey は、対象 app が未起動なら起動、frontmost なら hide、それ以外なら focus します。複数 window がある場合は focus 対象を cycle します。
+App Switcher Hotkey は、対象 app が未起動なら起動、frontmost なら app 全体を hide、それ以外なら focus します。複数 window がある場合は、各 display で現在表示中の Space にある window だけを cycle します。現在表示中の Space に対象 window がない場合だけ、別の Space にある window へ移動します。
 
 | Hotkey   | App           |
 | -------- | ------------- |
