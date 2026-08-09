@@ -32,6 +32,7 @@ test.test("init.lua は Config Preflight 失敗時に runtime side effect を開
   test.equal(false, ok)
   test.contains(err, "invalid Hammerspoon config:")
   test.equal(0, #state.hotkeys)
+  test.equal(0, #state.applicationWatchers)
   test.equal(0, #state.eventtaps)
   test.equal(0, #state.tasks)
 end)
@@ -64,4 +65,37 @@ test.test("既定の App Switcher は ctrl+b/g/r で Safari、Google Chrome、Ch
     matchingHotkey.pressedFn()
     test.equal(appName, state.launchedApps[#state.launchedApps])
   end
+end)
+
+test.test("既定の App Hotkey Blocker は Google Chrome の frontmost 中だけ cmd+d を無効化する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  state.frontmostApplication = fakeHs.app("Safari", {
+    bundleID = "com.apple.Safari",
+    frontmost = true,
+  })
+
+  resetModules()
+
+  local ok, err = pcall(dofile, "init.lua")
+  test.equal(true, ok, err)
+
+  local cmdD
+  for _, hotkey in ipairs(state.hotkeys) do
+    if hotkey.key == "d" and #hotkey.mods == 1 and hotkey.mods[1] == "cmd" then
+      cmdD = hotkey
+      break
+    end
+  end
+
+  test.truthy(cmdD, "cmd+d が作成されていません")
+  test.equal(false, cmdD.enabled)
+
+  local watcher = state.applicationWatchers[1]
+  test.truthy(watcher, "application watcher が作成されていません")
+  watcher.callback("Google Chrome", hs.application.watcher.activated, fakeHs.app("Google Chrome", {
+    bundleID = "com.google.Chrome",
+    frontmost = true,
+  }))
+  test.equal(true, cmdD.enabled)
 end)

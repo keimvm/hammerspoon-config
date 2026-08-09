@@ -7,6 +7,7 @@ local testFiles = {
   "tests/reload_test.lua",
   "tests/input_remap_test.lua",
   "tests/app_switcher_test.lua",
+  "tests/app_hotkey_blocker_test.lua",
   "tests/unicode_converter_test.lua",
 }
 

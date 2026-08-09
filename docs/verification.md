@@ -47,6 +47,8 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 ### Hotkey と App Switcher
 
 - [ ] `F5` が frontmost app へ `cmd+r` を送信する現在の behavior を維持する。
+- [ ] Google Chrome が frontmost の間は `cmd+d` を押してもブックマーク追加が開かない。
+- [ ] Google Chrome 以外が frontmost の間は `cmd+d` が対象 app 本来の操作として動く。
 - [ ] 対象 app が未起動の場合、App Switcher Hotkey で起動する。
 - [ ] frontmost app で同じ Hotkey を押すと、別 Space の window を含む app 全体を hide する。
 - [ ] 対象 app の window を Space 1 と Space 2 に用意し、非 frontmost の状態から各 Space で Hotkey を押すと同じ Space の window を focus する。

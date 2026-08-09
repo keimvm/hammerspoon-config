@@ -1,4 +1,5 @@
 local bindings = require("modules.bindings")
+local appHotkeyBlocker = require("modules.app_hotkey_blocker")
 local commandKeys = require("modules.command_keys")
 local configValidation = require("modules.config_validation")
 local controlLayer = require("modules.control_layer")
@@ -64,6 +65,13 @@ local config = configOverride or {
       { commandKey = "cmd", outputKeyCode = 0x66 },
       { commandKey = "rightcmd", outputKeyCode = 0x68 },
     },
+  },
+  appHotkeyBlocker = {
+    id = "app-hotkey-blocker.chrome-cmd-d",
+    description = "Google Chrome で cmd+d を無効化",
+    bundleID = "com.google.Chrome",
+    mods = { "cmd" },
+    key = "d",
   },
   appSwitchers = {
     {
@@ -139,4 +147,5 @@ hidRemap.apply(config.hidRemap)
 reload.bind(config.reload, hotkeyRegistry)
 controlLayer.bind(config.controlLayer, hotkeyRegistry)
 commandKeys.bind(config.commandKeys)
+appHotkeyBlocker.start(config.appHotkeyBlocker, hotkeyRegistry)
 bindings.bind(config, hotkeyRegistry)

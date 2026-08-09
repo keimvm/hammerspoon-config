@@ -27,14 +27,15 @@ macOS 用の Hammerspoon 設定です。利用者が変更する設定値は `in
 
 ### Keyboard
 
-| 操作                      | 動作                            |
-| ------------------------- | ------------------------------- |
-| 物理 `caps_lock`          | `left_control`                  |
-| 物理 `left_control`       | `left_command`                  |
-| 左 Command key の単体押し | `英数`                          |
-| 右 Command key の単体押し | `かな`                          |
-| `ctrl+i/j/k/l`            | `up/left/down/right`            |
-| `F5`                      | frontmost app へ `cmd+r` を送信 |
+| 操作                            | 動作                            |
+| ------------------------------- | ------------------------------- |
+| 物理 `caps_lock`                | `left_control`                  |
+| 物理 `left_control`             | `left_command`                  |
+| 左 Command key の単体押し       | `英数`                          |
+| 右 Command key の単体押し       | `かな`                          |
+| `ctrl+i/j/k/l`                  | `up/left/down/right`            |
+| `F5`                            | frontmost app へ `cmd+r` を送信 |
+| Chrome が frontmost の `cmd+d`  | 無効                            |
 
 ### App Switcher
 
@@ -70,6 +71,7 @@ MarkEdit は、未起動時に `~/Desktop/memo` 直下の file をまとめて�
 | `config.commandKeys`         | Command key 単体押しの ON/OFF と出力 key code |
 | `config.controlLayer.arrows` | cursor 操作用 Hotkey                          |
 | `config.reload`              | frontmost app へ `cmd+r` を送る Hotkey        |
+| `config.appHotkeyBlocker`    | 対象 app で無効化する Hotkey と bundle ID     |
 | `config.appSwitchers`        | App Switcher の app、Hotkey、directory        |
 | `config.unicodeConverter`    | Unicode Converter の ON/OFF と Hotkey         |
 
@@ -105,6 +107,12 @@ Hotkey の共通 field は、一意な `id`、用途を示す `description`、mo
 - 旧 app 専用の `dirToOpen` は、新しい app で不要なら削除します。
 
 同じ `mods + key` を複数の有効な設定に使うと、Config Preflight が `duplicates Hotkey Identity` error を出して reload を中止します。新しい entry を追加するのではなく、既存の割り当てを置き換える場合は元の entry を編集してください。
+
+### App Hotkey Blocker を変更する
+
+`config.appHotkeyBlocker` は、`bundleID` が一致する app が frontmost の間だけ指定した Hotkey を有効にし、app 本来の操作を無効化します。初期設定では Google Chrome (`com.google.Chrome`) の `cmd+d` を無効化します。ほかの app が frontmost の間は `cmd+d` を妨げません。
+
+一時的に止める場合は `enabled = false` を追加します。Chrome Beta や Chrome Canary を対象にする場合は、実際の bundle ID に合わせて `bundleID` を変更します。
 
 ### その他の Hotkey を変更する
 

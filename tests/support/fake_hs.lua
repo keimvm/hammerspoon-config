@@ -63,6 +63,7 @@ end
 function M.new()
   local state = {
     alerts = {},
+    applicationWatchers = {},
     applications = {},
     appleScripts = {},
     choosers = {},
@@ -110,12 +111,16 @@ function M.new()
     timer = {},
     window = {},
   }
+  hs.application.watcher = {
+    activated = "activated",
+  }
 
   local keycodes = {
     cmd = 55,
     rightcmd = 54,
     f5 = 96,
     b = 11,
+    d = 2,
     f = 3,
     g = 5,
     i = 34,
@@ -140,17 +145,56 @@ function M.new()
     end,
   })
 
-  function hs.hotkey.bind(mods, key, pressedFn, releasedFn, repeatFn)
-    table.insert(state.operations, "hotkey.bind")
+  local function createHotkey(operation, enabled, mods, key, pressedFn, releasedFn, repeatFn)
+    table.insert(state.operations, operation)
     local hotkey = {
+      enabled = enabled,
       mods = mods,
       key = key,
       pressedFn = pressedFn,
       releasedFn = releasedFn,
       repeatFn = repeatFn,
     }
+    function hotkey:enable()
+      self.enabled = true
+      return self
+    end
+    function hotkey:disable()
+      self.enabled = false
+      return self
+    end
     table.insert(state.hotkeys, hotkey)
     return hotkey
+  end
+
+  function hs.hotkey.bind(mods, key, pressedFn, releasedFn, repeatFn)
+    return createHotkey("hotkey.bind", true, mods, key, pressedFn, releasedFn, repeatFn)
+  end
+
+  function hs.hotkey.new(mods, key, pressedFn, releasedFn, repeatFn)
+    return createHotkey("hotkey.new", false, mods, key, pressedFn, releasedFn, repeatFn)
+  end
+
+  function hs.application.frontmostApplication()
+    return state.frontmostApplication
+  end
+
+  function hs.application.watcher.new(callback)
+    table.insert(state.operations, "application.watcher.new")
+    local watcher = {
+      callback = callback,
+      started = false,
+    }
+    function watcher:start()
+      self.started = true
+      return self
+    end
+    function watcher:stop()
+      self.started = false
+      return self
+    end
+    table.insert(state.applicationWatchers, watcher)
+    return watcher
   end
 
   function hs.application.get(hint)

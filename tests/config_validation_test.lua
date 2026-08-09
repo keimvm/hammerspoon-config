@@ -50,6 +50,13 @@ local function validConfig()
         key = "r",
       },
     },
+    appHotkeyBlocker = {
+      id = "app-hotkey-blocker.chrome-cmd-d",
+      description = "Google Chrome で cmd+d を無効化",
+      bundleID = "com.google.Chrome",
+      mods = { "cmd" },
+      key = "d",
+    },
     unicodeConverter = {
       id = "unicode-converter.toggle",
       description = "Unicode converter を切り替える",
@@ -73,6 +80,7 @@ test.test("Config Preflight は複数の設定不備を field path 付きで集�
   test.contains(err, "config.controlLayer must be a table")
   test.contains(err, "config.reload must be a table")
   test.contains(err, "config.appSwitchers must be a table")
+  test.contains(err, "config.appHotkeyBlocker must be a table")
   test.contains(err, "config.unicodeConverter must be a table")
 end)
 
@@ -83,6 +91,7 @@ test.test("Config Preflight は feature の必須 field と型を検証する", 
     controlLayer = { arrows = "invalid" },
     reload = { id = "", description = false, mods = "cmd" },
     appSwitchers = { false },
+    appHotkeyBlocker = { bundleID = false },
     unicodeConverter = { enabled = "no" },
   })
 
@@ -97,6 +106,8 @@ test.test("Config Preflight は feature の必須 field と型を検証する", 
   test.contains(err, "config.reload.mods must be a table")
   test.contains(err, "config.reload.key must be a non-empty string")
   test.contains(err, "config.appSwitchers[1] must be a table")
+  test.contains(err, "config.appHotkeyBlocker.id must be a non-empty string")
+  test.contains(err, "config.appHotkeyBlocker.bundleID must be a non-empty string")
   test.contains(err, "config.unicodeConverter.enabled must be a boolean")
 end)
 

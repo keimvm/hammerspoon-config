@@ -163,29 +163,32 @@ function M.new()
   return setmetatable({ hotkeys = {} }, Registry)
 end
 
-local function requireOptionalFunction(value, fieldName, hotkeyId)
+local function requireOptionalFunction(value, fieldName, hotkeyId, errorLevel)
   if value ~= nil and type(value) ~= "function" then
-    error(string.format("hotkey %s %s must be a function", tostring(hotkeyId or "<unknown>"), fieldName), 3)
+    error(
+      string.format("hotkey %s %s must be a function", tostring(hotkeyId or "<unknown>"), fieldName),
+      errorLevel or 3
+    )
   end
 end
 
-function Registry:bind(hotkey, pressedFn, releasedFn, repeatFn)
+local function reserve(registry, hotkey, pressedFn, releasedFn, repeatFn)
   local id = type(hotkey) == "table" and hotkey.id or "<unknown>"
   local errors = {}
   local identity = validateDefinition(errors, {
     path = "hotkey " .. tostring(id),
     value = hotkey,
   })
-  if #errors > 0 then error(errors[1], 2) end
+  if #errors > 0 then error(errors[1], 3) end
   if not enabled(hotkey) then return nil end
 
   if type(pressedFn) ~= "function" then
-    error(string.format("hotkey %s pressedFn must be a function", hotkey.id), 2)
+    error(string.format("hotkey %s pressedFn must be a function", hotkey.id), 3)
   end
-  requireOptionalFunction(releasedFn, "releasedFn", hotkey.id)
-  requireOptionalFunction(repeatFn, "repeatFn", hotkey.id)
+  requireOptionalFunction(releasedFn, "releasedFn", hotkey.id, 4)
+  requireOptionalFunction(repeatFn, "repeatFn", hotkey.id, 4)
 
-  local existing = self.hotkeys[identity]
+  local existing = registry.hotkeys[identity]
   if existing then
     error(
       string.format(
@@ -196,16 +199,26 @@ function Registry:bind(hotkey, pressedFn, releasedFn, repeatFn)
         existing.id,
         existing.description
       ),
-      2
+      3
     )
   end
 
-  self.hotkeys[identity] = {
+  registry.hotkeys[identity] = {
     id = hotkey.id,
     description = hotkey.description,
   }
 
+  return true
+end
+
+function Registry:bind(hotkey, pressedFn, releasedFn, repeatFn)
+  if not reserve(self, hotkey, pressedFn, releasedFn, repeatFn) then return nil end
   return hs.hotkey.bind(hotkey.mods, hotkey.key, pressedFn, releasedFn, repeatFn)
+end
+
+function Registry:create(hotkey, pressedFn, releasedFn, repeatFn)
+  if not reserve(self, hotkey, pressedFn, releasedFn, repeatFn) then return nil end
+  return hs.hotkey.new(hotkey.mods, hotkey.key, pressedFn, releasedFn, repeatFn)
 end
 
 return M

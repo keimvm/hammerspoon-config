@@ -8,6 +8,7 @@ local ROOT_TABLE_FIELDS = {
   "commandKeys",
   "controlLayer",
   "reload",
+  "appHotkeyBlocker",
   "appSwitchers",
   "unicodeConverter",
 }
@@ -130,6 +131,15 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
 
   if valid.reload then
     collectHotkey("config.reload", config.reload, hotkeys)
+  end
+
+  if valid.appHotkeyBlocker then
+    collectHotkey("config.appHotkeyBlocker", config.appHotkeyBlocker, hotkeys)
+    requireNonEmptyString(
+      errors,
+      "config.appHotkeyBlocker.bundleID",
+      config.appHotkeyBlocker.bundleID
+    )
   end
 
   if valid.appSwitchers then

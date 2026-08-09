@@ -5,7 +5,7 @@
 ## Language
 
 **Hotkey**:
-Hammerspoon の `hs.hotkey.bind` で登録される、修飾キーと通常キーの組み合わせによる shortcut。
+Hammerspoon に登録される、修飾キーと通常キーの組み合わせ。常時有効にするものと、条件に応じて有効状態を切り替えるものを含む。
 _Avoid_: Shortcut, keybinding
 
 **Hotkey Registry**:
@@ -19,6 +19,10 @@ _Avoid_: Binding key, shortcut id
 **Desired Hotkey**:
 `init.lua` に宣言される、登録したい Hotkey の設定。Hotkey Registry が検証と登録を行う前の意図を表す。
 _Avoid_: Hotkey config, shortcut setting
+
+**App Hotkey Blocker**:
+対象 app が frontmost の間だけ Hotkey を有効にし、app 本来の操作を無効化する feature。対象 app と Hotkey の選択は `init.lua` の設定が表す。
+_Avoid_: Global Hotkey, Input Remap
 
 **App Switcher**:
 Desired Hotkey に対応する macOS app を起動、focus、hide、または window cycle する feature。window cycle は各 display で現在表示中の Space を優先し、対象 window がない場合だけ全 Space を対象にする。対象 app と Hotkey の選択は `init.lua` の設定が表す。
