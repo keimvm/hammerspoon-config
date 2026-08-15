@@ -182,7 +182,7 @@ test.test("既定の App Input Source は Zed が frontmost になると英数�
   test.equal(0x66, state.keyStrokes[1].key)
 end)
 
-test.test("既定の Timer は ctrl+` で入力を開く", function()
+test.test("既定の Timer は ctrl+p で入力を開く", function()
   local hs, state = fakeHs.new()
   _G.hs = hs
 
@@ -193,13 +193,13 @@ test.test("既定の Timer は ctrl+` で入力を開く", function()
 
   local matchingHotkey
   for _, hotkey in ipairs(state.hotkeys) do
-    if hotkey.key == "`" and #hotkey.mods == 1 and hotkey.mods[1] == "ctrl" then
+    if hotkey.key == "p" and #hotkey.mods == 1 and hotkey.mods[1] == "ctrl" then
       matchingHotkey = hotkey
       break
     end
   end
 
-  test.truthy(matchingHotkey, "ctrl+` が登録されていません")
+  test.truthy(matchingHotkey, "ctrl+p が登録されていません")
   matchingHotkey.pressedFn()
   test.equal(true, state.choosers[1].visible)
   test.equal("分（1〜180）", state.choosers[1].placeholderTextValue)

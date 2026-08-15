@@ -23,18 +23,18 @@ local function repeatingTimer(state)
   end
 end
 
-local function delayedTimer(state)
-  for _, timer in ipairs(state.timers) do
-    if timer.delay then return timer end
-  end
-end
-
 local function activeMenubar(state)
   local item
   for _, menubar in ipairs(state.menubars) do
     if not menubar.deleted then item = menubar end
   end
   return item
+end
+
+local function hotkeyFor(state, key)
+  for _, hotkey in ipairs(state.hotkeys) do
+    if hotkey.key == key then return hotkey end
+  end
 end
 
 local function cancelMenu(menubar)
@@ -120,6 +120,26 @@ test.test("Timer は有効な分数で開始行を出す", function()
   test.equal("25分で開始", chooser.currentChoices[1].text)
 end)
 
+test.test("Timer は Tab で数値を保ったまま分と秒を往復する", function()
+  local _, state = setup()
+  require("modules.timer").toggle()
+  local chooser = state.choosers[1]
+  local tabHotkey = hotkeyFor(state, "tab")
+  typeQuery(chooser, "90")
+
+  test.truthy(tabHotkey, "Tab Hotkey がありません")
+  test.equal(true, tabHotkey.enabled)
+  tabHotkey.pressedFn()
+  test.equal("90", chooser.queryValue)
+  test.equal("秒（1〜10800）", chooser.placeholderTextValue)
+  test.equal("90秒で開始", chooser.currentChoices[1].text)
+
+  tabHotkey.pressedFn()
+  test.equal("90", chooser.queryValue)
+  test.equal("分（1〜180）", chooser.placeholderTextValue)
+  test.equal("90分で開始", chooser.currentChoices[1].text)
+end)
+
 test.test("Timer は s で秒に切り替え欄から取り除く", function()
   local _, state = setup()
   require("modules.timer").toggle()
@@ -182,7 +202,7 @@ test.test("Timer は空では候補を出さず範囲外では許容範囲を示
 
   timer.toggle()
   chooser = state.choosers[1]
-  typeQuery(chooser, "s")
+  hotkeyFor(state, "tab").pressedFn()
   typeQuery(chooser, "10801")
   test.equal(1, #chooser.currentChoices)
   test.equal("1〜10800秒で入力してください", chooser.currentChoices[1].text)
@@ -197,6 +217,7 @@ test.test("Timer は Enter でメニューバーに残り時間を出す", funct
   local menubar = activeMenubar(state)
   test.truthy(menubar, "メニューバーがありません")
   test.equal("25:00", menubar.title)
+  test.equal(false, hotkeyFor(state, "tab").enabled)
 end)
 
 test.test("Timer は1秒ごとに残り時間を減らす", function()
@@ -208,12 +229,13 @@ test.test("Timer は1秒ごとに残り時間を減らす", function()
   test.equal("24:59", activeMenubar(state).title)
 end)
 
-test.test("Timer は1秒の countdown を 0:01 のまま完了する", function()
+test.test("Timer は1秒の countdown を 0:01 のまま完了し無期限 alert を出す", function()
   local _, state = setup()
   local timer = require("modules.timer")
   timer.toggle()
   local chooser = state.choosers[1]
-  typeQuery(chooser, "1s")
+  typeQuery(chooser, "1")
+  hotkeyFor(state, "tab").pressedFn()
   chooser.callback(chooser.currentChoices[1])
 
   local menubar = activeMenubar(state)
@@ -225,23 +247,39 @@ test.test("Timer は1秒の countdown を 0:01 のまま完了する", function(
   test.equal(true, menubar.deleted)
   test.equal(nil, activeMenubar(state))
   test.equal("0:01", menubar.title)
-  test.equal(1, #state.notifications)
-  test.equal("タイマー", state.notifications[1].title)
-  test.equal("1秒が経過しました", state.notifications[1].informativeText)
-  test.equal(true, state.notifications[1].alwaysPresent)
-  test.equal(0, state.notifications[1].withdrawAfter)
-  test.equal(nil, state.notifications[1].soundName)
-  delayedTimer(state).callback()
-  test.equal(0, #state.alerts)
+  test.equal(0, #state.notifications)
+  test.equal(1, #state.alerts)
+  test.equal("1秒が経過しました", state.alerts[1])
+  test.equal("indefinite", state.alertDetails[1].arguments[1])
+  test.equal(false, state.alertDetails[1].closed)
+  test.equal(true, state.eventtaps[1].started)
 end)
 
-test.test("Timer は分で開始した完了通知に当初の長さを入れる", function()
+test.test("Timer の完了 alert は画面クリックまで表示し click を通す", function()
+  local _, state = setup()
+  startFromQuery(state, "1s")
+  state.now = state.now + 1
+  repeatingTimer(state).callback()
+
+  local dismissTap = state.eventtaps[1]
+  test.equal(3, #dismissTap.watchedTypes)
+  test.equal(false, state.alertDetails[1].closed)
+
+  local suppressClick = dismissTap.callback()
+  test.equal(false, suppressClick)
+  test.equal(true, state.alertDetails[1].closed)
+  test.equal(1, #state.closedAlerts)
+  test.equal(0, state.closedAlerts[1].seconds)
+  test.equal(false, dismissTap.started)
+end)
+
+test.test("Timer は分で開始した完了 alert に当初の長さを入れる", function()
   local _, state = setup()
   startFromQuery(state, "25")
   state.now = state.now + 25 * 60
   repeatingTimer(state).callback()
 
-  test.equal("25分が経過しました", state.notifications[1].informativeText)
+  test.equal("25分が経過しました", state.alerts[1])
   test.equal(nil, activeMenubar(state))
 end)
 
@@ -259,17 +297,17 @@ test.test("Timer は180分を 180:00 で表示する", function()
   test.equal("180:00", activeMenubar(state).title)
 end)
 
-test.test("Timer は走行中の Enter で置き換え通知しない", function()
+test.test("Timer は走行中の Enter で置き換え alert を出さない", function()
   local _, state = setup()
   startFromQuery(state, "25")
   startFromQuery(state, "1")
 
   test.equal("1:00", activeMenubar(state).title)
   test.equal(true, state.menubars[1].deleted)
-  test.equal(0, #state.notifications)
+  test.equal(0, #state.alerts)
 end)
 
-test.test("Timer はメニューのキャンセルで止め通知しない", function()
+test.test("Timer はメニューのキャンセルで止め alert を出さない", function()
   local _, state = setup()
   startFromQuery(state, "25")
   local menubar = activeMenubar(state)
@@ -277,7 +315,7 @@ test.test("Timer はメニューのキャンセルで止め通知しない", fun
 
   test.equal(true, menubar.deleted)
   test.equal(nil, activeMenubar(state))
-  test.equal(0, #state.notifications)
+  test.equal(0, #state.alerts)
 end)
 
 test.test("Timer は入力中の再トグルで閉じて走行を続ける", function()
@@ -286,11 +324,14 @@ test.test("Timer は入力中の再トグルで閉じて走行を続ける", fun
   local timer = require("modules.timer")
   timer.toggle()
   local chooser = state.choosers[1]
+  local tabHotkey = hotkeyFor(state, "tab")
   test.equal(true, chooser.visible)
   test.equal("分（1〜180）", chooser.placeholderTextValue)
+  test.equal(true, tabHotkey.enabled)
 
   timer.toggle()
   test.equal(false, chooser.visible)
+  test.equal(false, tabHotkey.enabled)
   test.equal("25:00", activeMenubar(state).title)
 end)
 
@@ -305,20 +346,6 @@ test.test("Timer は毎回分で開き直す", function()
   test.equal("分（1〜180）", state.choosers[1].placeholderTextValue)
   test.equal("", state.choosers[1].queryValue)
   test.equal(0, #state.choosers[1].currentChoices)
-end)
-
-test.test("Timer は通知できないとき alert に落とす", function()
-  local _, state = setup()
-  state.notifyPresented = false
-  startFromQuery(state, "1s")
-  state.now = state.now + 1
-  repeatingTimer(state).callback()
-
-  test.equal(1, #state.notifications)
-  test.equal(0, #state.alerts)
-  delayedTimer(state).callback()
-  test.equal(1, #state.alerts)
-  test.equal("1秒が経過しました", state.alerts[1])
 end)
 
 test.test("Timer は壁時計で残り時間を合わせる", function()
@@ -337,5 +364,5 @@ test.test("Timer は期限を過ぎた壁時計で完了する", function()
   repeatingTimer(state).callback()
 
   test.equal(nil, activeMenubar(state))
-  test.equal("5分が経過しました", state.notifications[1].informativeText)
+  test.equal("5分が経過しました", state.alerts[1])
 end)

@@ -63,6 +63,7 @@ end
 
 function M.new()
   local state = {
+    alertDetails = {},
     alerts = {},
     applicationWatchers = {},
     applications = {},
@@ -83,6 +84,7 @@ function M.new()
     pasteboardText = "",
     operations = {},
     keyboardModifiers = {},
+    closedAlerts = {},
     activeSpaces = { main = 1 },
   }
 
@@ -141,7 +143,9 @@ function M.new()
     m = 46,
     n = 45,
     o = 31,
+    p = 35,
     r = 15,
+    tab = 48,
     t = 17,
     u = 32,
     up = 126,
@@ -229,8 +233,23 @@ function M.new()
     return window.spaces
   end
 
-  function hs.alert.show(message)
+  function hs.alert.show(message, ...)
+    local id = "alert-" .. tostring(#state.alertDetails + 1)
+    table.insert(state.alertDetails, {
+      id = id,
+      message = message,
+      arguments = { ... },
+      closed = false,
+    })
     table.insert(state.alerts, message)
+    return id
+  end
+
+  function hs.alert.closeSpecific(id, seconds)
+    for _, alert in ipairs(state.alertDetails) do
+      if alert.id == id then alert.closed = true end
+    end
+    table.insert(state.closedAlerts, { id = id, seconds = seconds })
   end
 
   function hs.chooser.new(callback)
@@ -379,6 +398,10 @@ function M.new()
     }
     function tap:start()
       self.started = true
+      return self
+    end
+    function tap:stop()
+      self.started = false
       return self
     end
     table.insert(state.eventtaps, tap)

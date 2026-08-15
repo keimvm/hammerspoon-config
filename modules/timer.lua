@@ -6,7 +6,6 @@ local MIN_MINUTES = 1
 local MAX_MINUTES = 180
 local MIN_SECONDS = 1
 local MAX_SECONDS = 10800
-local NOTIFICATION_CHECK_DELAY = 1
 local CHOOSER_WIDTH = 36
 local CHOOSER_ROWS = 1
 local CHOOSER_FG = { red = 0.96, green = 0.97, blue = 0.98, alpha = 1 }
@@ -14,8 +13,11 @@ local CHOOSER_SUBTEXT = { red = 0.66, green = 0.70, blue = 0.76, alpha = 1 }
 
 local chooser = nil
 local chooserVisible = false
+local unitToggleHotkey = nil
 local unit = "minutes"
 local running = nil
+local activeAlertIds = {}
+local alertDismissTap = nil
 
 local function copyList(list)
   local copy = {}
@@ -111,24 +113,35 @@ local function formatRemaining(seconds)
   return string.format("%d:%02d", mins, secs)
 end
 
-local function announce(text)
-  local notification = hs.notify.new({
-    title = "タイマー",
-    informativeText = text,
-    alwaysPresent = true,
-    autoWithdraw = false,
-    withdrawAfter = 0,
-  })
-  if not notification then
-    hs.alert.show(text)
-    return
+local function dismissAlerts()
+  for _, alertId in ipairs(activeAlertIds) do
+    hs.alert.closeSpecific(alertId, 0)
   end
-  notification:send()
-  hs.timer.doAfter(NOTIFICATION_CHECK_DELAY, function()
-    if not notification:presented() then
-      hs.alert.show(text)
-    end
+  activeAlertIds = {}
+
+  if alertDismissTap then
+    alertDismissTap:stop()
+    alertDismissTap = nil
+  end
+end
+
+local function announce(text)
+  local alertId = hs.alert.show(text, "indefinite")
+  if not alertId then return end
+
+  table.insert(activeAlertIds, alertId)
+  if alertDismissTap then return end
+
+  local eventTypes = hs.eventtap.event.types
+  alertDismissTap = hs.eventtap.new({
+    eventTypes.leftMouseDown,
+    eventTypes.rightMouseDown,
+    eventTypes.otherMouseDown,
+  }, function()
+    dismissAlerts()
+    return false
   end)
+  alertDismissTap:start()
 end
 
 local function stopRunning()
@@ -208,13 +221,24 @@ local function applyQuery(query)
   end
 end
 
+local function disableUnitToggle()
+  if unitToggleHotkey then unitToggleHotkey:disable() end
+end
+
 local function ensureChooser()
   if chooser then return chooser end
 
   chooser = hs.chooser.new(function(choice)
     chooserVisible = false
+    disableUnitToggle()
     if not choice or not choice.seconds then return end
     startCountdown(choice)
+  end)
+
+  unitToggleHotkey = hs.hotkey.new({}, "tab", function()
+    if not chooserVisible then return end
+    unit = unit == "minutes" and "seconds" or "minutes"
+    applyQuery(chooser:query() or "")
   end)
 
   chooser:width(CHOOSER_WIDTH)
@@ -261,11 +285,13 @@ function M.show()
   applyQuery("")
   c:show()
   chooserVisible = true
+  if unitToggleHotkey then unitToggleHotkey:enable() end
 end
 
 function M.hide()
   if chooser then chooser:hide() end
   chooserVisible = false
+  disableUnitToggle()
 end
 
 function M.toggle()
