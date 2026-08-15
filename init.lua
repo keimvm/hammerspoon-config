@@ -62,7 +62,7 @@ local config = configOverride or {
   },
   -- cmd+shift+u で文字と code point を相互変換。
   unicodeConverter = { enabled = false, mods = { "cmd", "shift" }, key = "u" },  -- 現時点で無効
-  -- ctrl+p で one-shot countdown。メニューバーに残り時間を表示。
+  -- one-shot countdown。メニューバーに残り時間を表示。
   timer = { enabled = true, mods = { "ctrl" }, key = "p" },
 }
 
