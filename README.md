@@ -51,8 +51,6 @@ App Switcher Hotkey は、対象 app が未起動なら起動、frontmost なら
 | `ctrl+g` | Google Chrome |
 | `ctrl+n` | Notion        |
 
-Typora は、未起動時に `~/Desktop/memo` 直下の file をまとめて開きます。directory が利用できない場合は通常起動します。
-
 ### Unicode Converter
 
 初期設定では無効です。`config.unicodeConverter.enabled = true` にすると `cmd+shift+u` で開きます。
@@ -71,7 +69,7 @@ Typora は、未起動時に `~/Desktop/memo` 直下の file をまとめて開�
 | `config.controlLayer.arrows` | cursor 操作用 Hotkey                          |
 | `config.reload`              | frontmost app へ `cmd+r` を送る Hotkey        |
 | `config.appHotkeyBlocker`    | 対象 app で無効化する Hotkey と app 名        |
-| `config.appSwitchers`        | App Switcher の app、Hotkey、directory        |
+| `config.appSwitchers`        | App Switcher の app と Hotkey                 |
 | `config.unicodeConverter`    | Unicode Converter の ON/OFF と Hotkey         |
 
 Hotkey の共通 field は modifier 配列の `mods` と通常 key の `key` です。`id` は省略時に各 feature が導出します。用途の説明は `init.lua` のコメントで十分で、`description` は不要です。`enabled = false` を指定すると登録しません。`enabled` を省略した場合は有効です。`mods` は各 entry で `{ "ctrl" }` のように明示します。
@@ -82,7 +80,7 @@ Hotkey の共通 field は modifier 配列の `mods` と通常 key の `key` で
 
 ### App Switcher を変更する
 
-各 entry は対象 app の `appName`、`mods`、`key` を書きます。未起動時に開く directory がある場合だけ `dirToOpen` を足します。`id` は省略時に App Switcher が導出します。
+各 entry は対象 app の `appName`、`mods`、`key` を書きます。`id` は省略時に App Switcher が導出します。
 
 たとえば `ctrl+r` は変えず、対象を `/Applications/ChatGPT.app` から `/Applications/Codex.app` へ変更する場合は、`appName` だけを書き換えます。
 
@@ -95,7 +93,6 @@ Hotkey の共通 field は modifier 配列の `mods` と通常 key の `key` で
 - ショートカットの key を変える場合は `key` を変更します。modifier を変える場合は `mods` を変更します。
 - 追加する場合は `{ appName = "...", mods = { "ctrl" }, key = "..." }` を足し、`key`（と `mods`）を一意にします。
 - 一時的に止める場合は `enabled = false`、削除する場合は entry 全体を削除します。
-- 旧 app 専用の `dirToOpen` は、新しい app で不要なら削除します。
 
 同じ `mods + key` を複数の有効な設定に使うと、Config Preflight が `duplicates Hotkey Identity` error を出して reload を中止します。新しい entry を追加するのではなく、既存の割り当てを置き換える場合は元の entry を編集してください。
 
@@ -116,7 +113,7 @@ Hotkey の共通 field は modifier 配列の `mods` と通常 key の `key` で
 3. Console に error がないことを確認します。Config Preflight error がある場合は、表示された `config...` の field path を修正します。
 4. 変更した Hotkey と、その変更によって重複する可能性がある Hotkey を実機で確認します。
 
-App Switcher を変更した場合は、対象 app の起動、focus、hide、必要に応じて window cycle と `dirToOpen` を確認します。全機能の checklist は [`docs/verification.md`](docs/verification.md) を参照してください。
+App Switcher を変更した場合は、対象 app の起動、focus、hide、必要に応じて window cycle を確認します。全機能の checklist は [`docs/verification.md`](docs/verification.md) を参照してください。
 
 modifier remap により操作できなくなった場合は、別の terminal または入力手段から次を実行して解除し、設定を修正してから reload します。
 

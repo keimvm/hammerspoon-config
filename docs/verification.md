@@ -25,9 +25,9 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 ### Config Preflight
 
 1. `config.reload.key` を一時的に `F6` へ変更する。
-2. 同時に `config.unicodeConverter.enabled = "invalid"` と、先頭の App Switcher に `dirToOpen = 42` を設定する。
+2. 同時に `config.unicodeConverter.enabled = "invalid"` と、先頭の App Switcher に `appName = 42` を設定する。
 3. Hammerspoon menu の **Reload Config** を実行する。Hotkey ではなく menu を使う。
-4. Console に一つの `invalid Hammerspoon config:` error が表示され、その中に `config.unicodeConverter.enabled` と `config.appSwitchers[1].dirToOpen` の両方が含まれることを確認する。
+4. Console に一つの `invalid Hammerspoon config:` error が表示され、その中に `config.unicodeConverter.enabled` と `config.appSwitchers[1].appName` の両方が含まれることを確認する。
 5. `F6` を押しても reload 用の `cmd+r` が送信されず、validation 失敗後に新しい Hotkey が登録されていないことを確認する。
 6. 3か所を元の値へ戻し、Hammerspoon menu の **Reload Config** を実行する。
 7. Console に error がなく、`F5` と以降の対象 checklist が動作することを確認する。
@@ -57,7 +57,6 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 - [ ] 現在の Space の対象 window が minimized の場合、別 Space の window より優先して復帰する。
 - [ ] 現在の Space に対象 window がない場合だけ、別 Space の window へ移動する。
 - [ ] 複数 display を使う場合、どの display でも現在表示中の Space にある window を優先する。
-- [ ] Typora の directory が利用できない場合でも通常起動へ fallback する。
 
 ### Unicode Converter
 

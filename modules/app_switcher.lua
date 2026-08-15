@@ -2,7 +2,6 @@ local M = {}
 
 local log = hs.logger.new("app_switcher", "warning")
 local appState = {}  -- key: bundleID or appName -> { lastWinId = number }
-local openTasks = {} -- keep hs.task references alive
 local DEFAULT_MODS = { "ctrl" }
 
 local function copyList(list)
@@ -62,61 +61,6 @@ local function findRunningApp(hint)
   if app then return app end
 
   return hs.application.find(hint, false, true)
-end
-
-local function getFilesInDirectory(dirPath)
-  local files = {}
-  local ok, iter, dirObj = pcall(hs.fs.dir, dirPath)
-  if not ok or not iter then
-    hs.alert.show("ディレクトリが見つかりません: " .. dirPath)
-    return files
-  end
-
-  for entry in iter, dirObj do
-    if entry ~= "." and entry ~= ".." and not entry:match("^%.") then
-      local fullPath = dirPath .. "/" .. entry
-      local attr = hs.fs.attributes(fullPath)
-      if attr and attr.mode == "file" then
-        table.insert(files, fullPath)
-      end
-    end
-  end
-
-  table.sort(files)
-  return files
-end
-
-local function openFilesWithApp(appName, files)
-  local args = { "-a", appName }
-  for _, path in ipairs(files) do table.insert(args, path) end
-
-  local task
-  task = hs.task.new("/usr/bin/open", function(exitCode, _, stdErr)
-    if task then openTasks[task] = nil end
-    if exitCode == 0 then return end
-
-    if stdErr and #stdErr > 0 then
-      log.wf("open failed for %s: %s", appName, stdErr)
-    else
-      log.wf("open failed for %s (exit %d)", appName, exitCode)
-    end
-
-    hs.application.launchOrFocus(appName)
-  end, args)
-
-  if not task then
-    log.wf("failed to create open task for %s", appName)
-    return false
-  end
-
-  openTasks[task] = true
-  if not task:start() then
-    log.wf("failed to start open task for %s", appName)
-    openTasks[task] = nil
-    return false
-  end
-
-  return true
 end
 
 local function getCandidateWindows(app)
@@ -230,20 +174,6 @@ local function reopenApp(app)
   return ok
 end
 
-local function launchApp(appName, dirToOpen)
-  if not dirToOpen then
-    hs.application.launchOrFocus(appName)
-    return
-  end
-
-  local files = getFilesInDirectory(dirToOpen)
-  if #files > 0 and openFilesWithApp(appName, files) then
-    return
-  end
-
-  hs.application.launchOrFocus(appName)
-end
-
 local function focusNextWindowAfterReopen(appName)
   hs.timer.doAfter(0.05, function()
     local app = findRunningApp(appName)
@@ -261,11 +191,11 @@ local function focusNextWindowAfterReopen(appName)
   end)
 end
 
-function M.toggleOrCycle(appName, dirToOpen)
+function M.toggleOrCycle(appName)
   local app = findRunningApp(appName)
 
   if not app then
-    launchApp(appName, dirToOpen)
+    hs.application.launchOrFocus(appName)
     return
   end
 
@@ -294,7 +224,7 @@ end
 
 function M.bindToggle(binding, registry)
   registry:bind(M.desiredHotkey(binding), function()
-    M.toggleOrCycle(binding.appName, binding.dirToOpen)
+    M.toggleOrCycle(binding.appName)
   end)
 end
 

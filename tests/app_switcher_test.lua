@@ -204,19 +204,6 @@ test.test("App Switcher は window がない app を reopen する", function()
   test.equal(1, reopenedWindow.focusCount)
 end)
 
-test.test("App Switcher は dirToOpen が利用できない場合に通常 launch へ fallback する", function()
-  local hs, state = fakeHs.new()
-  hs.fs.dir = function(dirPath)
-    error("cannot open " .. dirPath)
-  end
-
-  loadAppSwitcher(hs).toggleOrCycle("MarkEdit", "/missing")
-
-  test.equal(1, #state.alerts)
-  test.contains(state.alerts[1], "/missing")
-  test.equal("MarkEdit", state.launchedApps[1])
-end)
-
 test.test("App Switcher は compact な Desired Hotkey を既定の ctrl+key で登録する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs
@@ -256,20 +243,3 @@ test.test("App Switcher は明示した mods を既定より優先する", funct
   test.equal("cmd", state.hotkeys[1].mods[1])
 end)
 
-test.test("App Switcher は dirToOpen が空の場合に通常 launch へ fallback する", function()
-  local hs, state = fakeHs.new()
-  local entries = { ".", ".." }
-  local index = 0
-  hs.fs.dir = function()
-    return function()
-      index = index + 1
-      return entries[index]
-    end
-  end
-
-  loadAppSwitcher(hs).toggleOrCycle("MarkEdit", "/empty")
-
-  test.equal(0, #state.alerts)
-  test.equal(1, #state.launchedApps)
-  test.equal("MarkEdit", state.launchedApps[1])
-end)

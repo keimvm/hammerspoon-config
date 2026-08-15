@@ -9,7 +9,6 @@ local hotkeyRegistry = require("modules.hotkey_registry").new()
 
 hs.window.animationDuration = 0
 
-local home = os.getenv("HOME")
 local configOverride = ...
 
 local config = configOverride or {
@@ -42,7 +41,7 @@ local config = configOverride or {
   appHotkeyBlocker = { appName = "Google Chrome", mods = { "cmd" }, key = "d" },
   -- 未起動なら起動、frontmost なら hide、それ以外は focus / cycle。
   appSwitchers = {
-    { appName = "Typora", mods = { "ctrl" }, key = "m", dirToOpen = home .. "/Desktop/memo" },  -- 未起動時は ~/Desktop/memo 直下の file を開く。
+    { appName = "Typora", mods = { "ctrl" }, key = "m" },
     { appName = "Finder", mods = { "ctrl" }, key = "f" },
     { appName = "メール", mods = { "ctrl" }, key = "o" },
     { appName = "cmux", mods = { "ctrl" }, key = "t" },

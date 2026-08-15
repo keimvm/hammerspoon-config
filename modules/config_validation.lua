@@ -157,9 +157,6 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
       collectHotkey(path, appSwitcher.desiredHotkey(binding), hotkeys)
       if type(binding) == "table" then
         requireNonEmptyString(errors, path .. ".appName", binding.appName)
-        if binding.dirToOpen ~= nil and type(binding.dirToOpen) ~= "string" then
-          addError(errors, path .. ".dirToOpen", "must be a string")
-        end
       end
     end
   end

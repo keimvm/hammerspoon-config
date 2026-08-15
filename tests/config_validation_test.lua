@@ -126,7 +126,7 @@ test.test("Config Preflight は unknown key と modifier を検出する", funct
   test.contains(err, "config.controlLayer.arrows[1].arrow is unknown: north")
 end)
 
-test.test("Config Preflight は Input Remap mapping と dirToOpen の shape を検証する", function()
+test.test("Config Preflight は Input Remap mapping の shape を検証する", function()
   local config = validConfig()
   config.hidRemap.mappings = {
     { from = "left_magic", to = "left_control" },
@@ -140,7 +140,6 @@ test.test("Config Preflight は Input Remap mapping と dirToOpen の shape を�
     syntheticEventSourceUserData = "invalid",
   }
   config.appSwitchers[1].appName = ""
-  config.appSwitchers[1].dirToOpen = 42
 
   local ok, err = validate(config)
 
@@ -154,7 +153,6 @@ test.test("Config Preflight は Input Remap mapping と dirToOpen の shape を�
   test.contains(err, "config.controlLayer.sentinelCommand.virtualModifier is unknown: hyper")
   test.contains(err, "config.controlLayer.sentinelCommand.syntheticEventSourceUserData must be a number")
   test.contains(err, "config.appSwitchers[1].appName must be a non-empty string")
-  test.contains(err, "config.appSwitchers[1].dirToOpen must be a string")
 end)
 
 test.test("Config Preflight は Hotkey Identity と id の重複を検出する", function()
@@ -192,7 +190,6 @@ test.test("Config Preflight は config を変更せず環境依存の存在確�
   local config = validConfig()
   config.appSwitchers[1].mods = { "control" }
   config.appSwitchers[1].key = "R"
-  config.appSwitchers[1].dirToOpen = "/path/that/does/not/exist"
 
   local ok, result = validate(config)
 
@@ -200,7 +197,6 @@ test.test("Config Preflight は config を変更せず環境依存の存在確�
   test.equal(true, result)
   test.equal("control", config.appSwitchers[1].mods[1])
   test.equal("R", config.appSwitchers[1].key)
-  test.equal("/path/that/does/not/exist", config.appSwitchers[1].dirToOpen)
 end)
 
 test.test("Config Preflight は compact な App Switcher を受け付け入力を mutate しない", function()
@@ -213,7 +209,6 @@ test.test("Config Preflight は compact な App Switcher を受け付け入力�
     {
       appName = "MarkEdit",
       key = "m",
-      dirToOpen = "/path/that/does/not/exist",
     },
   }
 
@@ -225,7 +220,8 @@ test.test("Config Preflight は compact な App Switcher を受け付け入力�
   test.equal(nil, config.appSwitchers[1].mods)
   test.equal("Safari", config.appSwitchers[1].appName)
   test.equal("b", config.appSwitchers[1].key)
-  test.equal("/path/that/does/not/exist", config.appSwitchers[2].dirToOpen)
+  test.equal("MarkEdit", config.appSwitchers[2].appName)
+  test.equal("m", config.appSwitchers[2].key)
 end)
 
 test.test("Config Preflight は compact な App Switcher の Hotkey Identity 重複を検出する", function()
