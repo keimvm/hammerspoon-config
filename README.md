@@ -74,7 +74,7 @@ Typora は、未起動時に `~/Desktop/memo` 直下の file をまとめて開�
 | `config.appSwitchers`        | App Switcher の app、Hotkey、directory        |
 | `config.unicodeConverter`    | Unicode Converter の ON/OFF と Hotkey         |
 
-Hotkey の共通 field は modifier 配列の `mods` と通常 key の `key` です。`id` は省略時に各 feature が導出します。用途の説明は `init.lua` のコメントで十分で、`description` は不要です。`enabled = false` を指定すると登録しません。`enabled` を省略した場合は有効です。`mods` を省略した場合の既定値は feature ごとに異なります。App Switcher と Control arrow は `{ "ctrl" }`、App Hotkey Blocker は `{ "cmd" }`、Reload は `{}`、Unicode Converter は `{ "cmd", "shift" }` です。
+Hotkey の共通 field は modifier 配列の `mods` と通常 key の `key` です。`id` は省略時に各 feature が導出します。用途の説明は `init.lua` のコメントで十分で、`description` は不要です。`enabled = false` を指定すると登録しません。`enabled` を省略した場合は有効です。`mods` は各 entry で `{ "ctrl" }` のように明示します。
 
 ### Modifier remap を変更する
 
@@ -82,18 +82,18 @@ Hotkey の共通 field は modifier 配列の `mods` と通常 key の `key` で
 
 ### App Switcher を変更する
 
-各 entry は対象 app の `appName` と `key` を書きます。未起動時に開く directory がある場合だけ `dirToOpen` を足します。`id` は省略時に App Switcher が導出し、`mods` の既定値は `{ "ctrl" }` です。
+各 entry は対象 app の `appName`、`mods`、`key` を書きます。未起動時に開く directory がある場合だけ `dirToOpen` を足します。`id` は省略時に App Switcher が導出します。
 
 たとえば `ctrl+r` は変えず、対象を `/Applications/ChatGPT.app` から `/Applications/Codex.app` へ変更する場合は、`appName` だけを書き換えます。
 
 ```diff
--  { appName = "ChatGPT", key = "r" },
-+  { appName = "Codex", key = "r" },
+-  { appName = "ChatGPT", mods = { "ctrl" }, key = "r" },
++  { appName = "Codex", mods = { "ctrl" }, key = "r" },
 ```
 
 - `appName` は実際の app bundle 名に合わせます。別名の app は別 bundle として扱います。
-- ショートカットの key を変える場合は `key` を変更します。既定以外の modifier を使う場合だけ `mods` を指定します。
-- 追加する場合は `{ appName = "...", key = "..." }` を足し、`key`（と `mods`）を一意にします。
+- ショートカットの key を変える場合は `key` を変更します。modifier を変える場合は `mods` を変更します。
+- 追加する場合は `{ appName = "...", mods = { "ctrl" }, key = "..." }` を足し、`key`（と `mods`）を一意にします。
 - 一時的に止める場合は `enabled = false`、削除する場合は entry 全体を削除します。
 - 旧 app 専用の `dirToOpen` は、新しい app で不要なら削除します。
 
@@ -101,13 +101,13 @@ Hotkey の共通 field は modifier 配列の `mods` と通常 key の `key` で
 
 ### App Hotkey Blocker を変更する
 
-`config.appHotkeyBlocker` は、`appName` が一致する app が frontmost の間だけ指定した Hotkey を有効にし、app 本来の操作を無効化します。初期設定では Google Chrome の `cmd+d` を無効化します。ほかの app が frontmost の間は `cmd+d` を妨げません。`id` は省略時に App Hotkey Blocker が導出し、`mods` の既定値は `{ "cmd" }` です。
+`config.appHotkeyBlocker` は、`appName` が一致する app が frontmost の間だけ指定した Hotkey を有効にし、app 本来の操作を無効化します。初期設定では Google Chrome の `cmd+d` を無効化します。ほかの app が frontmost の間は `cmd+d` を妨げません。`id` は省略時に App Hotkey Blocker が導出します。
 
 一時的に止める場合は `enabled = false` を追加します。Chrome Beta や Chrome Canary を対象にする場合は、実際の app 名に合わせて `appName` を変更します。
 
 ### その他の Hotkey を変更する
 
-`config.reload` は `{ key = "F5" }` のように `key` を書きます。`id` は省略時に導出し、`mods` の既定値は `{}` です。Control arrow は `{ key = "i", arrow = "up" }` のように `key` と `arrow` を書き、`id` は省略時に `arrow` から導出します。既存の全 Hotkey と重複しない組み合わせを指定してください。Unicode Converter は `enabled` を `true` / `false` にして切り替えます。Hotkey を変える場合だけ `mods` と `key` を指定し、省略時は `cmd+shift+u` です。
+`config.reload` と `config.unicodeConverter` の対象 entry で `mods` と `key` を変更します。Control arrow は `{ mods = { "ctrl" }, key = "i", arrow = "up" }` のように書き、`id` は省略時に `arrow` から導出します。既存の全 Hotkey と重複しない組み合わせを指定してください。Unicode Converter は `enabled` を `true` / `false` にして切り替えます。
 
 ## 変更を反映・検証する
 
