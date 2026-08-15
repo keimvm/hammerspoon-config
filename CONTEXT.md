@@ -43,3 +43,7 @@ _Avoid_: App launcher
 **Input Remap**:
 物理キーや低レベル入力イベントを別の入力に変換する設定。`eventtap` や `hidutil` に寄るものを含み、Hotkey とは別に扱う。
 _Avoid_: Hotkey, shortcut
+
+**Timer**:
+Desired Hotkey から開始する、同時に1本だけの one-shot countdown。
+_Avoid_: Pomodoro, alarm, reminder

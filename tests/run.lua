@@ -8,6 +8,7 @@ local testFiles = {
   "tests/app_switcher_test.lua",
   "tests/app_hotkey_blocker_test.lua",
   "tests/app_input_source_test.lua",
+  "tests/timer_test.lua",
   "tests/unicode_converter_test.lua",
 }
 

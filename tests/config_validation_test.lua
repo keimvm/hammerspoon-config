@@ -65,6 +65,11 @@ local function validConfig()
       mods = { "cmd", "shift" },
       key = "u",
     },
+    timer = {
+      enabled = true,
+      mods = { "ctrl" },
+      key = "`",
+    },
   }
 end
 
@@ -83,6 +88,7 @@ test.test("Config Preflight は複数の設定不備を field path 付きで集�
   test.contains(err, "config.appHotkeyBlockers must be a table")
   test.contains(err, "config.appInputSources must be a table")
   test.contains(err, "config.unicodeConverter must be a table")
+  test.contains(err, "config.timer must be a table")
 end)
 
 test.test("Config Preflight は feature の必須 field と型を検証する", function()
@@ -94,6 +100,7 @@ test.test("Config Preflight は feature の必須 field と型を検証する", 
     appHotkeyBlockers = { { appName = false } },
     appInputSources = { enabled = "yes", bindings = false },
     unicodeConverter = { description = false, mods = "cmd", enabled = "no" },
+    timer = { description = false, mods = "ctrl", enabled = "no" },
   })
 
   test.equal(false, ok)
@@ -110,6 +117,9 @@ test.test("Config Preflight は feature の必須 field と型を検証する", 
   test.contains(err, "config.unicodeConverter.description must be a non-empty string")
   test.contains(err, "config.unicodeConverter.mods must be a table")
   test.contains(err, "config.unicodeConverter.enabled must be a boolean")
+  test.contains(err, "config.timer.description must be a non-empty string")
+  test.contains(err, "config.timer.mods must be a table")
+  test.contains(err, "config.timer.enabled must be a boolean")
 end)
 
 test.test("Config Preflight は unknown key と modifier を検出する", function()
@@ -346,6 +356,19 @@ test.test("Config Preflight は compact な Unicode Converter を受け付け入
   test.equal(nil, config.unicodeConverter.mods)
   test.equal(nil, config.unicodeConverter.key)
   test.equal(false, config.unicodeConverter.enabled)
+end)
+
+test.test("Config Preflight は compact な Timer を受け付け入力を mutate しない", function()
+  local config = validConfig()
+  config.timer = { enabled = true }
+
+  local ok, result = validate(config)
+
+  test.equal(true, ok, result)
+  test.equal(nil, config.timer.id)
+  test.equal(nil, config.timer.mods)
+  test.equal(nil, config.timer.key)
+  test.equal(true, config.timer.enabled)
 end)
 
 test.test("Config Preflight は App Input Source の unknown source と重複 app を検出する", function()

@@ -4,6 +4,7 @@ local appSwitcher = require("modules.app_switcher")
 local controlLayer = require("modules.control_layer")
 local hidRemap = require("modules.hid_remap")
 local hotkeyRegistry = require("modules.hotkey_registry")
+local timer = require("modules.timer")
 local unicodeConverter = require("modules.unicode_converter")
 
 local M = {}
@@ -15,6 +16,7 @@ local ROOT_TABLE_FIELDS = {
   "appHotkeyBlockers",
   "appSwitchers",
   "appInputSources",
+  "timer",
   "unicodeConverter",
 }
 
@@ -243,6 +245,14 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
         end
       end
     end
+  end
+
+  if valid.timer then
+    collectHotkey(
+      "config.timer",
+      timer.desiredHotkey(config.timer),
+      hotkeys
+    )
   end
 
   if valid.unicodeConverter then

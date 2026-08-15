@@ -74,6 +74,10 @@ function M.new()
     keyStrokes = {},
     launchedApps = {},
     logs = {},
+    menubars = {},
+    notifications = {},
+    notifyPresented = true,
+    now = 1000,
     tasks = {},
     timers = {},
     pasteboardText = "",
@@ -105,6 +109,8 @@ function M.new()
     json = {},
     keycodes = {},
     logger = {},
+    menubar = {},
+    notify = {},
     osascript = {},
     pasteboard = {},
     spaces = {},
@@ -119,6 +125,7 @@ function M.new()
   local keycodes = {
     cmd = 55,
     rightcmd = 54,
+    ["`"] = 50,
     f5 = 96,
     b = 11,
     d = 2,
@@ -254,6 +261,7 @@ function M.new()
       return self
     end
     function chooser:query(query)
+      if query == nil then return self.queryValue end
       self.queryValue = query
       return self
     end
@@ -292,6 +300,66 @@ function M.new()
     local timer = { delay = delay, callback = callback }
     table.insert(state.timers, timer)
     return timer
+  end
+
+  function hs.timer.doEvery(interval, callback)
+    local timer = {
+      interval = interval,
+      callback = callback,
+      running = true,
+    }
+    function timer:stop()
+      self.running = false
+      return self
+    end
+    table.insert(state.timers, timer)
+    return timer
+  end
+
+  function hs.timer.secondsSinceEpoch()
+    return state.now
+  end
+
+  function hs.menubar.new(inMenuBar)
+    local item = {
+      inMenuBar = inMenuBar ~= false,
+      deleted = false,
+    }
+    function item:setTitle(title)
+      self.title = title
+      return self
+    end
+    function item:setMenu(menu)
+      self.menu = menu
+      return self
+    end
+    function item:delete()
+      self.deleted = true
+      self.inMenuBar = false
+    end
+    table.insert(state.menubars, item)
+    return item
+  end
+
+  function hs.notify.new(fnOrAttrs, attrs)
+    local attributes = attrs
+    if type(fnOrAttrs) == "table" then
+      attributes = fnOrAttrs
+    end
+    attributes = attributes or {}
+    local notification = {
+      attrs = attributes,
+      sent = false,
+    }
+    function notification:send()
+      self.sent = true
+      table.insert(state.notifications, attributes)
+      return self
+    end
+    function notification:presented()
+      return state.notifyPresented
+    end
+    return notification
   end
 
   function hs.eventtap.keyStroke(mods, key, delay)

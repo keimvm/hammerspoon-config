@@ -39,6 +39,7 @@ macOS 用の Hammerspoon 設定です。利用者が変える値は `init.lua` �
 | `config.appSwitchers` | 対象 app の起動、focus、hide、window cycle |
 | `config.appInputSources` | 対象 app が frontmost になったときの入力ソース。初期設定は Zed、cmux、Visual Studio Code で英数 |
 | `config.unicodeConverter` | 文字と code point の相互変換。初期設定では無効 |
+| `config.timer` | one-shot countdown。初期設定は ctrl と backtick |
 
 App Switcher は、対象 app が未起動なら起動、frontmost なら app 全体を hide、それ以外なら focus します。複数 window がある場合は、各 display で現在表示中の Space にある window だけを cycle します。いまの Space に対象 window がない場合だけ、別の Space へ移動します。
 
@@ -70,6 +71,7 @@ Hotkey の共通 field は `mods` と `key` です。`mods` は各 entry で `{ 
 - **Control Layer**: `{ mods = { "ctrl" }, key = "h", to = "delete" }` の形です。送り先が修飾付きのときは `to = { mods = { "cmd" }, key = "r" }` です。長押しで repeat させない場合は `repeatable = false` を付けます。`id` は省略時に `to` から導出します。後方削除は `delete`、前方削除は `forwarddelete` です。
 - **App Input Source**: `{ appName = "Zed", source = "eisu" }` の形です。`source` は `eisu`（英数）または `kana`（かな）です。止めるときは `enabled = false`。
 - **Unicode Converter**: `enabled` を `true` にすると登録します。変換例は `あ` ↔ `U+3042` です。`U+3042`、`0x3042`、`3042` を受け付けます。
+- **Timer**: `enabled = false` で登録しません。Hotkey を変えるときは `mods` と `key` を編集します。既定は分（1〜180）、入力中の `s` で秒（1〜10800）、`m` で分です。数字と `s` / `m` 以外は受け付けません。
 
 ## 変更を反映する
 
