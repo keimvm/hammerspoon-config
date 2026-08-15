@@ -1,9 +1,9 @@
 local appHotkeyBlocker = require("modules.app_hotkey_blocker")
+local appInputSource = require("modules.app_input_source")
 local appSwitcher = require("modules.app_switcher")
 local controlLayer = require("modules.control_layer")
 local hidRemap = require("modules.hid_remap")
 local hotkeyRegistry = require("modules.hotkey_registry")
-local reload = require("modules.reload")
 local unicodeConverter = require("modules.unicode_converter")
 
 local M = {}
@@ -12,9 +12,9 @@ local ROOT_TABLE_FIELDS = {
   "hidRemap",
   "commandKeys",
   "controlLayer",
-  "reload",
-  "appHotkeyBlocker",
+  "appHotkeyBlockers",
   "appSwitchers",
+  "appInputSources",
   "unicodeConverter",
 }
 
@@ -26,6 +26,28 @@ local function requireTable(errors, path, value)
   if type(value) == "table" then return true end
   addError(errors, path, "must be a table")
   return false
+end
+
+local function requireList(errors, path, value)
+  if not requireTable(errors, path, value) then return false end
+
+  local count = 0
+  for key in pairs(value) do
+    if type(key) ~= "number" or key < 1 or key % 1 ~= 0 then
+      addError(errors, path, "must be a list")
+      return false
+    end
+    count = count + 1
+  end
+
+  for index = 1, count do
+    if value[index] == nil then
+      addError(errors, path, "must be a list")
+      return false
+    end
+  end
+
+  return true
 end
 
 local function requireNonEmptyString(errors, path, value)
@@ -58,6 +80,41 @@ local function validateKnownHidKey(errors, path, value)
   if not requireNonEmptyString(errors, path, value) then return end
   if not hidRemap.supportsKey(value) then
     addError(errors, path, "is unknown: " .. value)
+  end
+end
+
+local function validateKnownSource(errors, path, value)
+  if not requireNonEmptyString(errors, path, value) then return end
+  if not appInputSource.supportsSource(value) then
+    addError(errors, path, "is unknown: " .. value)
+  end
+end
+
+local function validateKeyStroke(errors, path, value)
+  if type(value) == "string" then
+    if requireNonEmptyString(errors, path, value) then
+      validateKnownKey(errors, path, value)
+    end
+    return
+  end
+
+  if type(value) ~= "table" then
+    addError(errors, path, "must be a key name or chord table")
+    return
+  end
+
+  if value.mods ~= nil then
+    if type(value.mods) ~= "table" then
+      addError(errors, path .. ".mods", "must be a table")
+    else
+      for index, mod in ipairs(value.mods) do
+        validateKnownModifier(errors, path .. ".mods[" .. index .. "]", mod)
+      end
+    end
+  end
+
+  if requireNonEmptyString(errors, path .. ".key", value.key) then
+    validateKnownKey(errors, path .. ".key", value.key)
   end
 end
 
@@ -109,10 +166,11 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
       for index, binding in ipairs(config.controlLayer.bindings) do
         local path = string.format("config.controlLayer.bindings[%d]", index)
         collectHotkey(path, controlLayer.desiredHotkey(binding), hotkeys)
-        if type(binding) == "table"
-          and requireNonEmptyString(errors, path .. ".to", binding.to)
-        then
-          validateKnownKey(errors, path .. ".to", binding.to)
+        if type(binding) == "table" then
+          if binding.repeatable ~= nil and type(binding.repeatable) ~= "boolean" then
+            addError(errors, path .. ".repeatable", "must be a boolean")
+          end
+          validateKeyStroke(errors, path .. ".to", binding.to)
         end
       end
     end
@@ -134,21 +192,18 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
     end
   end
 
-  if valid.reload then
-    collectHotkey("config.reload", reload.desiredHotkey(config.reload), hotkeys)
-  end
-
-  if valid.appHotkeyBlocker then
-    collectHotkey(
-      "config.appHotkeyBlocker",
-      appHotkeyBlocker.desiredHotkey(config.appHotkeyBlocker),
-      hotkeys
-    )
-    requireNonEmptyString(
-      errors,
-      "config.appHotkeyBlocker.appName",
-      config.appHotkeyBlocker.appName
-    )
+  if valid.appHotkeyBlockers then
+    if config.appHotkeyBlockers.appName ~= nil then
+      addError(errors, "config.appHotkeyBlockers", "must be a list")
+    else
+      for index, binding in ipairs(config.appHotkeyBlockers) do
+        local path = string.format("config.appHotkeyBlockers[%d]", index)
+        collectHotkey(path, appHotkeyBlocker.desiredHotkey(binding), hotkeys)
+        if type(binding) == "table" then
+          requireNonEmptyString(errors, path .. ".appName", binding.appName)
+        end
+      end
+    end
   end
 
   if valid.appSwitchers then
@@ -157,6 +212,35 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
       collectHotkey(path, appSwitcher.desiredHotkey(binding), hotkeys)
       if type(binding) == "table" then
         requireNonEmptyString(errors, path .. ".appName", binding.appName)
+      end
+    end
+  end
+
+  if valid.appInputSources then
+    validateEnabled(errors, "config.appInputSources", config.appInputSources.enabled)
+    if requireList(errors, "config.appInputSources.bindings", config.appInputSources.bindings) then
+      local appNames = {}
+      for index, binding in ipairs(config.appInputSources.bindings) do
+        local path = string.format("config.appInputSources.bindings[%d]", index)
+        if requireTable(errors, path, binding) then
+          validateEnabled(errors, path, binding.enabled)
+          if requireNonEmptyString(errors, path .. ".appName", binding.appName) then
+            if appNames[binding.appName] then
+              addError(
+                errors,
+                path .. ".appName",
+                string.format(
+                  "duplicates %s.appName: %s",
+                  appNames[binding.appName],
+                  binding.appName
+                )
+              )
+            else
+              appNames[binding.appName] = path
+            end
+          end
+          validateKnownSource(errors, path .. ".source", binding.source)
+        end
       end
     end
   end

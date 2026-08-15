@@ -35,12 +35,6 @@ local function validConfig()
         },
       },
     },
-    reload = {
-      id = "reload.config",
-      description = "Hammerspoon 設定を再読み込み",
-      mods = {},
-      key = "F5",
-    },
     appSwitchers = {
       {
         id = "app-switcher.codex",
@@ -50,12 +44,19 @@ local function validConfig()
         key = "r",
       },
     },
-    appHotkeyBlocker = {
-      id = "app-hotkey-blocker.chrome-cmd-d",
-      description = "Google Chrome で cmd+d を無効化",
-      appName = "Google Chrome",
-      mods = { "cmd" },
-      key = "d",
+    appHotkeyBlockers = {
+      {
+        id = "app-hotkey-blocker.chrome-cmd-d",
+        description = "Google Chrome で cmd+d を無効化",
+        appName = "Google Chrome",
+        mods = { "cmd" },
+        key = "d",
+      },
+    },
+    appInputSources = {
+      bindings = {
+        { appName = "Zed", source = "eisu" },
+      },
     },
     unicodeConverter = {
       id = "unicode-converter.toggle",
@@ -78,9 +79,9 @@ test.test("Config Preflight は複数の設定不備を field path 付きで集�
   test.contains(err, "config.hidRemap must be a table")
   test.contains(err, "config.commandKeys must be a table")
   test.contains(err, "config.controlLayer must be a table")
-  test.contains(err, "config.reload must be a table")
   test.contains(err, "config.appSwitchers must be a table")
-  test.contains(err, "config.appHotkeyBlocker must be a table")
+  test.contains(err, "config.appHotkeyBlockers must be a table")
+  test.contains(err, "config.appInputSources must be a table")
   test.contains(err, "config.unicodeConverter must be a table")
 end)
 
@@ -89,10 +90,10 @@ test.test("Config Preflight は feature の必須 field と型を検証する", 
     hidRemap = { enabled = "yes", mappings = false },
     commandKeys = { enabled = 1, bindings = "invalid" },
     controlLayer = { bindings = "invalid" },
-    reload = { id = "", description = false, mods = "cmd" },
     appSwitchers = { false },
-    appHotkeyBlocker = { appName = false },
-    unicodeConverter = { enabled = "no" },
+    appHotkeyBlockers = { { appName = false } },
+    appInputSources = { enabled = "yes", bindings = false },
+    unicodeConverter = { description = false, mods = "cmd", enabled = "no" },
   })
 
   test.equal(false, ok)
@@ -101,27 +102,28 @@ test.test("Config Preflight は feature の必須 field と型を検証する", 
   test.contains(err, "config.commandKeys.enabled must be a boolean")
   test.contains(err, "config.commandKeys.bindings must be a table")
   test.contains(err, "config.controlLayer.bindings must be a table")
-  test.contains(err, "config.reload.description must be a non-empty string")
-  test.contains(err, "config.reload.mods must be a table")
-  test.contains(err, "config.reload.key must be a non-empty string")
   test.contains(err, "config.appSwitchers[1] must be a table")
-  test.contains(err, "config.appHotkeyBlocker.id must be a non-empty string")
-  test.contains(err, "config.appHotkeyBlocker.appName must be a non-empty string")
+  test.contains(err, "config.appHotkeyBlockers[1].id must be a non-empty string")
+  test.contains(err, "config.appHotkeyBlockers[1].appName must be a non-empty string")
+  test.contains(err, "config.appInputSources.enabled must be a boolean")
+  test.contains(err, "config.appInputSources.bindings must be a table")
+  test.contains(err, "config.unicodeConverter.description must be a non-empty string")
+  test.contains(err, "config.unicodeConverter.mods must be a table")
   test.contains(err, "config.unicodeConverter.enabled must be a boolean")
 end)
 
 test.test("Config Preflight は unknown key と modifier を検出する", function()
   local config = validConfig()
-  config.reload.mods = { "hyper" }
-  config.reload.key = "missing_key"
+  config.unicodeConverter.mods = { "hyper" }
+  config.unicodeConverter.key = "missing_key"
   config.commandKeys.bindings[1].commandKey = "left_magic"
   config.controlLayer.bindings[1].to = "north"
 
   local ok, err = validate(config)
 
   test.equal(false, ok)
-  test.contains(err, "config.reload.mods[1] is unknown: hyper")
-  test.contains(err, "config.reload.key is unknown: missing_key")
+  test.contains(err, "config.unicodeConverter.mods[1] is unknown: hyper")
+  test.contains(err, "config.unicodeConverter.key is unknown: missing_key")
   test.contains(err, "config.commandKeys.bindings[1].commandKey is unknown: left_magic")
   test.contains(err, "config.controlLayer.bindings[1].to is unknown: north")
 end)
@@ -246,8 +248,7 @@ test.test("Config Preflight は compact な Control Layer を受け付け入力�
     { key = "i", to = "up" },
     { key = "h", to = "delete" },
   }
-  config.reload.description = nil
-  config.appHotkeyBlocker.description = nil
+  config.appHotkeyBlockers[1].description = nil
   config.unicodeConverter.description = nil
 
   local ok, result = validate(config)
@@ -260,36 +261,78 @@ test.test("Config Preflight は compact な Control Layer を受け付け入力�
   test.equal("up", config.controlLayer.bindings[1].to)
   test.equal("h", config.controlLayer.bindings[2].key)
   test.equal("delete", config.controlLayer.bindings[2].to)
-  test.equal(nil, config.reload.description)
 end)
 
-test.test("Config Preflight は compact な App Hotkey Blocker を受け付け入力を mutate しない", function()
+test.test("Config Preflight は Control Layer の chord 送り先を受け付け入力を mutate しない", function()
   local config = validConfig()
-  config.appHotkeyBlocker = {
-    appName = "Google Chrome",
-    key = "d",
+  config.controlLayer.bindings = {
+    { mods = {}, key = "F5", to = { mods = { "cmd" }, key = "r" } },
   }
 
   local ok, result = validate(config)
 
   test.equal(true, ok, result)
-  test.equal(nil, config.appHotkeyBlocker.id)
-  test.equal(nil, config.appHotkeyBlocker.description)
-  test.equal(nil, config.appHotkeyBlocker.mods)
-  test.equal("Google Chrome", config.appHotkeyBlocker.appName)
-  test.equal("d", config.appHotkeyBlocker.key)
+  test.equal(nil, config.controlLayer.bindings[1].id)
+  test.equal("F5", config.controlLayer.bindings[1].key)
+  test.equal("cmd", config.controlLayer.bindings[1].to.mods[1])
+  test.equal("r", config.controlLayer.bindings[1].to.key)
 end)
 
-test.test("Config Preflight は compact な Reload を受け付け入力を mutate しない", function()
+test.test("Config Preflight は Control Layer の不正な chord 送り先を検出する", function()
   local config = validConfig()
-  config.reload = { key = "F5" }
+  config.controlLayer.bindings = {
+    { mods = {}, key = "F5", to = { mods = { "hyper" }, key = "missing_key" } },
+    { mods = { "ctrl" }, key = "i", to = 12 },
+  }
+
+  local ok, err = validate(config)
+
+  test.equal(false, ok)
+  test.contains(err, "config.controlLayer.bindings[1].to.mods[1] is unknown: hyper")
+  test.contains(err, "config.controlLayer.bindings[1].to.key is unknown: missing_key")
+  test.contains(err, "config.controlLayer.bindings[2].to must be a key name or chord table")
+end)
+
+test.test("Config Preflight は Control Layer の repeatable の型を検証する", function()
+  local config = validConfig()
+  config.controlLayer.bindings[1].repeatable = "no"
+
+  local ok, err = validate(config)
+
+  test.equal(false, ok)
+  test.contains(err, "config.controlLayer.bindings[1].repeatable must be a boolean")
+end)
+
+test.test("Config Preflight は compact な App Hotkey Blocker を受け付け入力を mutate しない", function()
+  local config = validConfig()
+  config.appHotkeyBlockers = {
+    {
+      appName = "Google Chrome",
+      key = "d",
+    },
+  }
 
   local ok, result = validate(config)
 
   test.equal(true, ok, result)
-  test.equal(nil, config.reload.id)
-  test.equal(nil, config.reload.mods)
-  test.equal("F5", config.reload.key)
+  test.equal(nil, config.appHotkeyBlockers[1].id)
+  test.equal(nil, config.appHotkeyBlockers[1].description)
+  test.equal(nil, config.appHotkeyBlockers[1].mods)
+  test.equal("Google Chrome", config.appHotkeyBlockers[1].appName)
+  test.equal("d", config.appHotkeyBlockers[1].key)
+end)
+
+test.test("Config Preflight は単一の App Hotkey Blocker を list として拒否する", function()
+  local config = validConfig()
+  config.appHotkeyBlockers = {
+    appName = "Google Chrome",
+    key = "d",
+  }
+
+  local ok, err = validate(config)
+
+  test.equal(false, ok)
+  test.contains(err, "config.appHotkeyBlockers must be a list")
 end)
 
 test.test("Config Preflight は compact な Unicode Converter を受け付け入力を mutate しない", function()
@@ -303,4 +346,37 @@ test.test("Config Preflight は compact な Unicode Converter を受け付け入
   test.equal(nil, config.unicodeConverter.mods)
   test.equal(nil, config.unicodeConverter.key)
   test.equal(false, config.unicodeConverter.enabled)
+end)
+
+test.test("Config Preflight は App Input Source の unknown source と重複 app を検出する", function()
+  local config = validConfig()
+  config.appInputSources.bindings = {
+    { appName = "Zed", source = "english" },
+    { appName = "Zed", source = "eisu" },
+    { appName = "", source = false },
+  }
+
+  local ok, err = validate(config)
+
+  test.equal(false, ok)
+  test.contains(err, "config.appInputSources.bindings[1].source is unknown: english")
+  test.contains(
+    err,
+    "config.appInputSources.bindings[2].appName duplicates config.appInputSources.bindings[1].appName: Zed"
+  )
+  test.contains(err, "config.appInputSources.bindings[3].appName must be a non-empty string")
+  test.contains(err, "config.appInputSources.bindings[3].source must be a non-empty string")
+end)
+
+test.test("Config Preflight は単一の App Input Source binding を list として拒否する", function()
+  local config = validConfig()
+  config.appInputSources.bindings = {
+    appName = "Zed",
+    source = "eisu",
+  }
+
+  local ok, err = validate(config)
+
+  test.equal(false, ok)
+  test.contains(err, "config.appInputSources.bindings must be a list")
 end)

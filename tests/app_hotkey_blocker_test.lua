@@ -8,6 +8,13 @@ local function blockerConfig()
   }
 end
 
+local function startBlockers(blockers)
+  test.resetModule("modules.app_hotkey_blocker")
+  test.resetModule("modules.hotkey_registry")
+  local registry = require("modules.hotkey_registry").new()
+  require("modules.app_hotkey_blocker").start(blockers, registry)
+end
+
 test.test("App Hotkey Blocker は起動時に対象 app が frontmost なら Hotkey を有効にする", function()
   local hs, state = fakeHs.new()
   _G.hs = hs
@@ -16,11 +23,7 @@ test.test("App Hotkey Blocker は起動時に対象 app が frontmost なら Hot
     frontmost = true,
   })
 
-  test.resetModule("modules.app_hotkey_blocker")
-  test.resetModule("modules.hotkey_registry")
-
-  local registry = require("modules.hotkey_registry").new()
-  require("modules.app_hotkey_blocker").start(blockerConfig(), registry)
+  startBlockers({ blockerConfig() })
 
   test.equal(1, #state.hotkeys)
   test.equal(true, state.hotkeys[1].enabled)
@@ -36,11 +39,7 @@ test.test("App Hotkey Blocker は対象 app の activate 中だけ Hotkey を有
     frontmost = true,
   })
 
-  test.resetModule("modules.app_hotkey_blocker")
-  test.resetModule("modules.hotkey_registry")
-
-  local registry = require("modules.hotkey_registry").new()
-  require("modules.app_hotkey_blocker").start(blockerConfig(), registry)
+  startBlockers({ blockerConfig() })
 
   local hotkey = state.hotkeys[1]
   local watcher = state.applicationWatchers[1]
@@ -67,12 +66,8 @@ test.test("App Hotkey Blocker は compact な Desired Hotkey を既定の cmd+ke
     frontmost = true,
   })
 
-  test.resetModule("modules.app_hotkey_blocker")
-  test.resetModule("modules.hotkey_registry")
-
   local config = blockerConfig()
-  local registry = require("modules.hotkey_registry").new()
-  require("modules.app_hotkey_blocker").start(config, registry)
+  startBlockers({ config })
 
   test.equal(1, #state.hotkeys)
   test.equal("d", state.hotkeys[1].key)
@@ -87,15 +82,13 @@ test.test("App Hotkey Blocker は明示した mods を既定より優先する",
   local hs, state = fakeHs.new()
   _G.hs = hs
 
-  test.resetModule("modules.app_hotkey_blocker")
-  test.resetModule("modules.hotkey_registry")
-
-  local registry = require("modules.hotkey_registry").new()
-  require("modules.app_hotkey_blocker").start({
-    appName = "Google Chrome",
-    mods = { "ctrl" },
-    key = "d",
-  }, registry)
+  startBlockers({
+    {
+      appName = "Google Chrome",
+      mods = { "ctrl" },
+      key = "d",
+    },
+  })
 
   test.equal(1, #state.hotkeys[1].mods)
   test.equal("ctrl", state.hotkeys[1].mods[1])
@@ -105,14 +98,37 @@ test.test("App Hotkey Blocker は無効なら Hotkey と watcher を作らない
   local hs, state = fakeHs.new()
   _G.hs = hs
 
-  test.resetModule("modules.app_hotkey_blocker")
-  test.resetModule("modules.hotkey_registry")
-
   local config = blockerConfig()
   config.enabled = false
-  local registry = require("modules.hotkey_registry").new()
-  require("modules.app_hotkey_blocker").start(config, registry)
+  startBlockers({ config })
 
   test.equal(0, #state.hotkeys)
   test.equal(0, #state.applicationWatchers)
+end)
+
+test.test("App Hotkey Blocker は複数の対象 app を独立に有効化する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  state.frontmostApplication = fakeHs.app("Safari", {
+    bundleID = "com.apple.Safari",
+    frontmost = true,
+  })
+
+  startBlockers({
+    { appName = "Google Chrome", mods = { "cmd" }, key = "d" },
+    { appName = "Safari", mods = { "cmd" }, key = "b" },
+  })
+
+  local chrome = state.hotkeys[1]
+  local safari = state.hotkeys[2]
+  local watcher = state.applicationWatchers[1]
+  test.equal(false, chrome.enabled)
+  test.equal(true, safari.enabled)
+
+  watcher.callback("Google Chrome", hs.application.watcher.activated, fakeHs.app("Google Chrome", {
+    bundleID = "com.google.Chrome",
+    frontmost = true,
+  }))
+  test.equal(true, chrome.enabled)
+  test.equal(false, safari.enabled)
 end)

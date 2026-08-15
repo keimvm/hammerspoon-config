@@ -21,12 +21,20 @@ _Avoid_: Binding key, shortcut id
 _Avoid_: Hotkey config, shortcut setting
 
 **Control Layer**:
-修飾付き Desired Hotkey を、別キーの入力として送る feature。組み合わせと送り先は `init.lua` の設定が表す。
+Desired Hotkey を、別キーまたは修飾付きキーの入力として送る feature。組み合わせと送り先は `init.lua` の設定が表す。
 _Avoid_: Input Remap, App Hotkey Blocker, emacs layer
 
 **App Hotkey Blocker**:
 対象 app が frontmost の間だけ Hotkey を有効にし、app 本来の操作を無効化する feature。対象 app と Hotkey の選択は `init.lua` の設定が表す。
 _Avoid_: Global Hotkey, Input Remap
+
+**App Input Source**:
+対象 app が frontmost になったとき、指定した入力ソースへ切り替える feature。対象 app と入力ソースの選択は `init.lua` の設定が表す。
+_Avoid_: IME switcher, input method watcher
+
+**Input Source**:
+英数またはかな。App Input Source が切り替える先。
+_Avoid_: layout, input method, keyboard layout
 
 **App Switcher**:
 Desired Hotkey に対応する macOS app を起動、focus、hide、または window cycle する feature。window cycle は各 display で現在表示中の Space を優先し、対象 window がない場合だけ全 Space を対象にする。対象 app と Hotkey の選択は `init.lua` の設定が表す。

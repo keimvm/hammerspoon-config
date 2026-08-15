@@ -99,6 +99,31 @@ test.test("既定の Control Layer は ctrl+h/d で後方削除と前方削除�
   end
 end)
 
+test.test("既定の Control Layer は F5 で cmd+r を送信する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+
+  resetModules()
+
+  local ok, err = pcall(dofile, "init.lua")
+  test.equal(true, ok, err)
+
+  local matchingHotkey
+  for _, hotkey in ipairs(state.hotkeys) do
+    if hotkey.key == "F5" and #hotkey.mods == 0 then
+      matchingHotkey = hotkey
+      break
+    end
+  end
+
+  test.truthy(matchingHotkey, "F5 が登録されていません")
+  test.equal(nil, matchingHotkey.repeatFn)
+  matchingHotkey.pressedFn()
+  test.equal(1, #state.keyStrokes)
+  test.equal("cmd", state.keyStrokes[1].mods[1])
+  test.equal("r", state.keyStrokes[1].key)
+end)
+
 test.test("既定の App Hotkey Blocker は Google Chrome の frontmost 中だけ cmd+d を無効化する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs
@@ -130,4 +155,29 @@ test.test("既定の App Hotkey Blocker は Google Chrome の frontmost 中だ�
     frontmost = true,
   }))
   test.equal(true, cmdD.enabled)
+end)
+
+test.test("既定の App Input Source は Zed が frontmost になると英数へ切り替える", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  state.frontmostApplication = fakeHs.app("Safari", {
+    bundleID = "com.apple.Safari",
+    frontmost = true,
+  })
+
+  resetModules()
+
+  local ok, err = pcall(dofile, "init.lua")
+  test.equal(true, ok, err)
+  test.equal(0, #state.keyStrokes)
+
+  for _, watcher in ipairs(state.applicationWatchers) do
+    watcher.callback("Zed", hs.application.watcher.activated, fakeHs.app("Zed", {
+      bundleID = "dev.zed.Zed",
+      frontmost = true,
+    }))
+  end
+
+  test.equal(1, #state.keyStrokes)
+  test.equal(0x66, state.keyStrokes[1].key)
 end)

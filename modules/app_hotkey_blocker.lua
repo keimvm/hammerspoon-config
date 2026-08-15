@@ -51,27 +51,41 @@ function M.desiredHotkey(binding)
   return hotkey
 end
 
-local function syncHotkey(config, app)
-  if app and app:name() == config.appName then
-    state.hotkey:enable()
-  else
-    state.hotkey:disable()
+function M.start(blockers, registry)
+  blockers = blockers or {}
+
+  local entries = {}
+  for _, config in ipairs(blockers) do
+    if config.enabled ~= false then
+      table.insert(entries, {
+        appName = config.appName,
+        hotkey = registry:create(M.desiredHotkey(config), function() end),
+      })
+    end
   end
-end
 
-function M.start(config, registry)
-  config = config or {}
-  if config.enabled == false then return end
+  if #entries == 0 then return end
 
-  state.hotkey = registry:create(M.desiredHotkey(config), function() end)
+  local function sync(app)
+    local name = app and app:name()
+    for _, entry in ipairs(entries) do
+      if name == entry.appName then
+        entry.hotkey:enable()
+      else
+        entry.hotkey:disable()
+      end
+    end
+  end
+
+  state.entries = entries
   state.watcher = hs.application.watcher.new(function(_, event, app)
     if event == hs.application.watcher.activated then
-      syncHotkey(config, app)
+      sync(app)
     end
   end)
 
   state.watcher:start()
-  syncHotkey(config, hs.application.frontmostApplication())
+  sync(hs.application.frontmostApplication())
 end
 
 return M

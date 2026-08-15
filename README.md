@@ -34,10 +34,10 @@ macOS 用の Hammerspoon 設定です。利用者が変える値は `init.lua` �
 | --- | --- |
 | `config.hidRemap` | 物理キーの Input Remap。指定できる key は `caps_lock`、`left_control`、`left_command` |
 | `config.commandKeys` | Command key の単体押し。初期設定は JIS の `英数` / `かな` |
-| `config.controlLayer.bindings` | 修飾付き Hotkey で別キーを送る。初期設定は矢印と削除 |
-| `config.reload` | frontmost app へ `cmd+r` を送る Hotkey。Hammerspoon 自身の reload ではない |
-| `config.appHotkeyBlocker` | 対象 app が frontmost の間だけ、指定 Hotkey で app 本来の操作を無効化する |
+| `config.controlLayer.bindings` | Hotkey で別キー、または修飾付きキーを送る。初期設定は矢印、削除、F5 → `cmd+r` |
+| `config.appHotkeyBlockers` | 対象 app が frontmost の間だけ、指定 Hotkey で app 本来の操作を無効化する |
 | `config.appSwitchers` | 対象 app の起動、focus、hide、window cycle |
+| `config.appInputSources` | 対象 app が frontmost になったときの入力ソース。初期設定は Zed、cmux、Visual Studio Code で英数 |
 | `config.unicodeConverter` | 文字と code point の相互変換。初期設定では無効 |
 
 App Switcher は、対象 app が未起動なら起動、frontmost なら app 全体を hide、それ以外なら focus します。複数 window がある場合は、各 display で現在表示中の Space にある window だけを cycle します。いまの Space に対象 window がない場合だけ、別の Space へ移動します。
@@ -66,14 +66,15 @@ Hotkey の共通 field は `mods` と `key` です。`mods` は各 entry で `{ 
 ### そのほか
 
 - **Input Remap を止める**: `config.hidRemap.enabled = false`。reload すると、この設定が適用した remap を解除します。mapping を変えるときは `mappings` の `from` と `to` を編集します。
-- **App Hotkey Blocker**: 対象 app が frontmost の間だけ有効です。止めるときは `enabled = false`。Chrome Beta など別名の app は、実際の app 名に `appName` を合わせます。
-- **Control Layer**: `{ mods = { "ctrl" }, key = "h", to = "delete" }` の形です。`id` は省略時に `to` から導出します。後方削除は `delete`、前方削除は `forwarddelete` です。
+- **App Hotkey Blocker**: list です。対象 app が frontmost の間だけ有効です。止めるときはその entry に `enabled = false`。Chrome Beta など別名の app は、実際の app 名に `appName` を合わせます。
+- **Control Layer**: `{ mods = { "ctrl" }, key = "h", to = "delete" }` の形です。送り先が修飾付きのときは `to = { mods = { "cmd" }, key = "r" }` です。長押しで repeat させない場合は `repeatable = false` を付けます。`id` は省略時に `to` から導出します。後方削除は `delete`、前方削除は `forwarddelete` です。
+- **App Input Source**: `{ appName = "Zed", source = "eisu" }` の形です。`source` は `eisu`（英数）または `kana`（かな）です。止めるときは `enabled = false`。
 - **Unicode Converter**: `enabled` を `true` にすると登録します。変換例は `あ` ↔ `U+3042` です。`U+3042`、`0x3042`、`3042` を受け付けます。
 
 ## 変更を反映する
 
 1. repo root で `./scripts/check` を実行します。
-2. Hammerspoon menu の **Reload Config** を実行します。`config.reload` の Hotkey は Hammerspoon の reload ではありません。
+2. Hammerspoon menu の **Reload Config** を実行します。Control Layer の F5 は Hammerspoon の reload ではありません。
 3. Console に error がないことを確認します。Config Preflight error なら、表示された `config...` の field path を直します。
 4. 変えた操作と、重複しそうな既存の操作を実機で確認します。
 

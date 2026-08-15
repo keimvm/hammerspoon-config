@@ -1,10 +1,10 @@
 local bindings = require("modules.bindings")
 local appHotkeyBlocker = require("modules.app_hotkey_blocker")
+local appInputSource = require("modules.app_input_source")
 local commandKeys = require("modules.command_keys")
 local configValidation = require("modules.config_validation")
 local controlLayer = require("modules.control_layer")
 local hidRemap = require("modules.hid_remap")
-local reload = require("modules.reload")
 local hotkeyRegistry = require("modules.hotkey_registry").new()
 
 hs.window.animationDuration = 0
@@ -19,9 +19,7 @@ local config = configOverride or {
       { from = "left_control", to = "left_command" },
     },
   },
-  -- F5: frontmost app に対して cmd+r。
-  reload = { mods = {}, key = "F5" },
-  -- ctrl+i/j/k/l → 矢印、ctrl+h → 後方削除、ctrl+d → 前方削除
+  -- ctrl+i/j/k/l → 矢印、ctrl+h → 後方削除、ctrl+d → 前方削除、F5 → cmd+r
   controlLayer = {
     bindings = {
       { mods = { "ctrl" }, key = "i", to = "up" },
@@ -30,6 +28,7 @@ local config = configOverride or {
       { mods = { "ctrl" }, key = "l", to = "right" },
       { mods = { "ctrl" }, key = "h", to = "delete" },
       { mods = { "ctrl" }, key = "d", to = "forwarddelete" },
+      { mods = {}, key = "F5", to = { mods = { "cmd" }, key = "r" }, repeatable = false },
     },
   },
   -- Command 単体押しで入力ソースを切り替える。（JIS keyboard: 0x66 = 英数, 0x68 = かな）
@@ -40,7 +39,9 @@ local config = configOverride or {
     },
   },
   -- Google Chrome が frontmost の間だけ cmd+d を無効化。
-  appHotkeyBlocker = { appName = "Google Chrome", mods = { "cmd" }, key = "d" },
+  appHotkeyBlockers = {
+    { appName = "Google Chrome", mods = { "cmd" }, key = "d" },
+  },
   -- 未起動なら起動、frontmost なら hide、それ以外は focus / cycle。
   appSwitchers = {
     { appName = "Typora", mods = { "ctrl" }, key = "m" },
@@ -51,6 +52,14 @@ local config = configOverride or {
     { appName = "Google Chrome", mods = { "ctrl" }, key = "g" },
     { appName = "Notion", mods = { "ctrl" }, key = "n" },
   },
+  -- 対象 app が frontmost になったら入力ソースを切り替える。
+  appInputSources = {
+    bindings = {
+      { appName = "Zed", source = "eisu" },
+      { appName = "cmux", source = "eisu" },
+      { appName = "Visual Studio Code", source = "eisu" },
+    },
+  },
   -- cmd+shift+u で文字と code point を相互変換。
   unicodeConverter = { enabled = false, mods = { "cmd", "shift" }, key = "u" },  -- 現時点で無効
 }
@@ -58,8 +67,8 @@ local config = configOverride or {
 configValidation.validate(config)
 
 hidRemap.apply(config.hidRemap)
-reload.bind(config.reload, hotkeyRegistry)
 controlLayer.bind(config.controlLayer, hotkeyRegistry)
 commandKeys.bind(config.commandKeys)
-appHotkeyBlocker.start(config.appHotkeyBlocker, hotkeyRegistry)
+appHotkeyBlocker.start(config.appHotkeyBlockers, hotkeyRegistry)
+appInputSource.start(config.appInputSources)
 bindings.bind(config, hotkeyRegistry)

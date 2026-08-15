@@ -4,10 +4,10 @@ local testFiles = {
   "tests/init_test.lua",
   "tests/config_validation_test.lua",
   "tests/hotkey_registry_test.lua",
-  "tests/reload_test.lua",
   "tests/input_remap_test.lua",
   "tests/app_switcher_test.lua",
   "tests/app_hotkey_blocker_test.lua",
+  "tests/app_input_source_test.lua",
   "tests/unicode_converter_test.lua",
 }
 

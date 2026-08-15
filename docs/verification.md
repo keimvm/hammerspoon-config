@@ -24,11 +24,11 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 
 ### Config Preflight
 
-1. `config.reload.key` を一時的に `F6` へ変更する。
+1. Control Layer の F5 entry（`to = { mods = { "cmd" }, key = "r" }`）の `key` を一時的に `F6` へ変更する。
 2. 同時に `config.unicodeConverter.enabled = "invalid"` と、先頭の App Switcher に `appName = 42` を設定する。
 3. Hammerspoon menu の **Reload Config** を実行する。Hotkey ではなく menu を使う。
 4. Console に一つの `invalid Hammerspoon config:` error が表示され、その中に `config.unicodeConverter.enabled` と `config.appSwitchers[1].appName` の両方が含まれることを確認する。
-5. `F6` を押しても reload 用の `cmd+r` が送信されず、validation 失敗後に新しい Hotkey が登録されていないことを確認する。
+5. `F6` を押しても `cmd+r` が送信されず、validation 失敗後に新しい Hotkey が登録されていないことを確認する。
 6. 3か所を元の値へ戻し、Hammerspoon menu の **Reload Config** を実行する。
 7. Console に error がなく、`F5` と以降の対象 checklist が動作することを確認する。
 
@@ -48,7 +48,7 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 
 ### Hotkey と App Switcher
 
-- [ ] `F5` が frontmost app へ `cmd+r` を送信する現在の behavior を維持する。
+- [ ] `F5` が frontmost app へ `cmd+r` を一度だけ送信し、長押ししても repeat しない。
 - [ ] Google Chrome が frontmost の間は `cmd+d` を押してもブックマーク追加が開かない。
 - [ ] Google Chrome 以外が frontmost の間は `cmd+d` が対象 app 本来の操作として動く。
 - [ ] 対象 app が未起動の場合、App Switcher Hotkey で起動する。
@@ -59,6 +59,13 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 - [ ] 現在の Space の対象 window が minimized の場合、別 Space の window より優先して復帰する。
 - [ ] 現在の Space に対象 window がない場合だけ、別 Space の window へ移動する。
 - [ ] 複数 display を使う場合、どの display でも現在表示中の Space にある window を優先する。
+
+### App Input Source
+
+- [ ] Zed を frontmost にすると英数へ切り替わる。
+- [ ] cmux を frontmost にすると英数へ切り替わる。
+- [ ] Visual Studio Code を frontmost にすると英数へ切り替わる。
+- [ ] Typora や Notion など対象外の app では、現在の入力ソースを維持する。
 
 ### Unicode Converter
 

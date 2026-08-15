@@ -17,6 +17,25 @@ local function copyList(list)
   return copy
 end
 
+local function destinationId(to)
+  if type(to) == "string" and to ~= "" then
+    return string.lower(to)
+  end
+  if type(to) ~= "table" then return nil end
+  if type(to.key) ~= "string" or to.key == "" then return nil end
+
+  local parts = {}
+  if type(to.mods) == "table" then
+    for _, mod in ipairs(to.mods) do
+      if type(mod) == "string" and mod ~= "" then
+        table.insert(parts, string.lower(mod))
+      end
+    end
+  end
+  table.insert(parts, string.lower(to.key))
+  return table.concat(parts, "+")
+end
+
 function M.desiredHotkey(binding)
   if type(binding) ~= "table" then return binding end
 
@@ -31,11 +50,9 @@ function M.desiredHotkey(binding)
     hotkey.mods = copyList(hotkey.mods)
   end
 
-  if (type(hotkey.id) ~= "string" or hotkey.id == "")
-    and type(hotkey.to) == "string"
-    and hotkey.to ~= ""
-  then
-    hotkey.id = "control-layer." .. string.lower(hotkey.to)
+  if type(hotkey.id) ~= "string" or hotkey.id == "" then
+    local id = destinationId(hotkey.to)
+    if id then hotkey.id = "control-layer." .. id end
   end
 
   return hotkey
@@ -53,12 +70,25 @@ local function postModifier(key, isDown, userData)
   virtualModifierDown = isDown
 end
 
+local function emitTarget(to)
+  if type(to) == "table" then
+    local mods = to.mods
+    if type(mods) ~= "table" then mods = {} end
+    hs.eventtap.keyStroke(mods, to.key, 0)
+    return
+  end
+
+  hs.eventtap.keyStroke({}, to, 0)
+end
+
 local function bindHotkeys(bindings, registry)
   for _, binding in ipairs(bindings or {}) do
     local emit = function()
-      hs.eventtap.keyStroke({}, binding.to, 0)
+      emitTarget(binding.to)
     end
-    registry:bind(M.desiredHotkey(binding), emit, nil, emit)
+    local repeatFn
+    if binding.repeatable ~= false then repeatFn = emit end
+    registry:bind(M.desiredHotkey(binding), emit, nil, repeatFn)
   end
 end
 

@@ -261,3 +261,58 @@ test.test("Control Layer は押下と長押し repeat で同じ送り先キー�
   test.equal("forwarddelete", state.keyStrokes[12].key)
   test.equal(0, #state.eventtaps)
 end)
+
+test.test("Control Layer は chord の送り先を押下と長押し repeat で送信する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hotkey_registry")
+  test.resetModule("modules.control_layer")
+
+  local registry = require("modules.hotkey_registry").new()
+  require("modules.control_layer").bind({
+    bindings = {
+      { mods = {}, key = "F5", to = { mods = { "cmd" }, key = "r" } },
+    },
+  }, registry)
+
+  test.equal(1, #state.hotkeys)
+  test.equal("F5", state.hotkeys[1].key)
+  test.equal(0, #state.hotkeys[1].mods)
+
+  state.hotkeys[1].pressedFn()
+  state.hotkeys[1].repeatFn()
+
+  test.equal(2, #state.keyStrokes)
+  test.equal("cmd", state.keyStrokes[1].mods[1])
+  test.equal("r", state.keyStrokes[1].key)
+  test.equal("cmd", state.keyStrokes[2].mods[1])
+  test.equal("r", state.keyStrokes[2].key)
+end)
+
+test.test("Control Layer は repeatable=false の送り先を長押し repeat で送信しない", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hotkey_registry")
+  test.resetModule("modules.control_layer")
+
+  local registry = require("modules.hotkey_registry").new()
+  require("modules.control_layer").bind({
+    bindings = {
+      {
+        mods = {},
+        key = "F5",
+        to = { mods = { "cmd" }, key = "r" },
+        repeatable = false,
+      },
+    },
+  }, registry)
+
+  test.equal(1, #state.hotkeys)
+  test.equal(nil, state.hotkeys[1].repeatFn)
+
+  state.hotkeys[1].pressedFn()
+
+  test.equal(1, #state.keyStrokes)
+  test.equal("cmd", state.keyStrokes[1].mods[1])
+  test.equal("r", state.keyStrokes[1].key)
+end)
