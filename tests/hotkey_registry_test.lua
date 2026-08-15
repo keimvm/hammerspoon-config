@@ -1,6 +1,22 @@
 local test = require("tests.test_helper")
 local fakeHs = require("tests.support.fake_hs")
 
+test.test("Hotkey Registry は description なしの Desired Hotkey を登録する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hotkey_registry")
+
+  local registry = require("modules.hotkey_registry").new()
+  registry:bind({
+    id = "reload.config",
+    mods = {},
+    key = "F5",
+  }, function() end)
+
+  test.equal(1, #state.hotkeys)
+  test.equal("F5", state.hotkeys[1].key)
+end)
+
 test.test("Hotkey Registry は同じ Hotkey Identity の重複を拒否する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs

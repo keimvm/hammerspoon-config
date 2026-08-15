@@ -1,6 +1,8 @@
 local M = {}
 
 local MAX_CLIPBOARD_BYTES = 1024
+local DEFAULT_MODS = { "cmd", "shift" }
+local DEFAULT_KEY = "u"
 local MAX_CLIPBOARD_LINES = 10
 local CHOOSER_WIDTH = 30
 local CHOOSER_ROWS = 3
@@ -10,6 +12,14 @@ local CHOOSER_SUBTEXT = { red = 0.66, green = 0.70, blue = 0.76, alpha = 1 }
 
 local chooser = nil
 local chooserVisible = false
+
+local function copyList(list)
+  local copy = {}
+  for index, value in ipairs(list) do
+    copy[index] = value
+  end
+  return copy
+end
 
 local function trim(s)
   return (s:gsub("^%s+", ""):gsub("%s+$", ""))
@@ -192,6 +202,31 @@ local function ensureChooser()
   end)
 
   return chooser
+end
+
+function M.desiredHotkey(binding)
+  if type(binding) ~= "table" then return binding end
+
+  local hotkey = {}
+  for key, value in pairs(binding) do
+    hotkey[key] = value
+  end
+
+  if hotkey.mods == nil then
+    hotkey.mods = copyList(DEFAULT_MODS)
+  elseif type(hotkey.mods) == "table" then
+    hotkey.mods = copyList(hotkey.mods)
+  end
+
+  if hotkey.key == nil then
+    hotkey.key = DEFAULT_KEY
+  end
+
+  if type(hotkey.id) ~= "string" or hotkey.id == "" then
+    hotkey.id = "unicode-converter.toggle"
+  end
+
+  return hotkey
 end
 
 function M.show()

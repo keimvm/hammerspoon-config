@@ -13,132 +13,45 @@ local home = os.getenv("HOME")
 local configOverride = ...
 
 local config = configOverride or {
+  -- 物理キーの remap。
   hidRemap = {
-    enabled = true,
     mappings = {
       { from = "caps_lock", to = "left_control" },
       { from = "left_control", to = "left_command" },
     },
   },
-  reload = {
-    id = "reload.config",
-    description = "Hammerspoon 設定を再読み込み",
-    mods = {},
-    key = "F5",
-  },
+  -- F5: frontmost app に対して cmd+r。
+  reload = { key = "F5" },
+  -- ctrl+i/j/k/l → 矢印
   controlLayer = {
     arrows = {
-      {
-        id = "control-layer.up",
-        description = "上矢印を送信",
-        mods = { "ctrl" },
-        key = "i",
-        arrow = "up",
-      },
-      {
-        id = "control-layer.left",
-        description = "左矢印を送信",
-        mods = { "ctrl" },
-        key = "j",
-        arrow = "left",
-      },
-      {
-        id = "control-layer.down",
-        description = "下矢印を送信",
-        mods = { "ctrl" },
-        key = "k",
-        arrow = "down",
-      },
-      {
-        id = "control-layer.right",
-        description = "右矢印を送信",
-        mods = { "ctrl" },
-        key = "l",
-        arrow = "right",
-      },
+      { key = "i", arrow = "up" },
+      { key = "j", arrow = "left" },
+      { key = "k", arrow = "down" },
+      { key = "l", arrow = "right" },
     },
   },
+  -- Command 単体押しで入力ソースを切り替える。（JIS keyboard: 0x66 = 英数, 0x68 = かな）
   commandKeys = {
-    enabled = true,
     bindings = {
-      -- JIS keyboard: 0x66 = 英数, 0x68 = かな。
       { commandKey = "cmd", outputKeyCode = 0x66 },
       { commandKey = "rightcmd", outputKeyCode = 0x68 },
     },
   },
-  appHotkeyBlocker = {
-    id = "app-hotkey-blocker.chrome-cmd-d",
-    description = "Google Chrome で cmd+d を無効化",
-    bundleID = "com.google.Chrome",
-    mods = { "cmd" },
-    key = "d",
-  },
+  -- Google Chrome が frontmost の間だけ cmd+d を無効化。既定 mods は cmd。
+  appHotkeyBlocker = { appName = "Google Chrome", key = "d" },
+  -- 既定 mods は ctrl。未起動なら起動、frontmost なら hide、それ以外は focus / cycle。
   appSwitchers = {
-    {
-      id = "app-switcher.markedit",
-      description = "MarkEdit を切り替える",
-      appName = "MarkEdit",
-      mods = { "ctrl" },
-      key = "m",
-      dirToOpen = home .. "/Desktop/memo",
-    },
-    {
-      id = "app-switcher.finder",
-      description = "Finder を切り替える",
-      appName = "Finder",
-      mods = { "ctrl" },
-      key = "f",
-    },
-    {
-      id = "app-switcher.mail",
-      description = "メールを切り替える",
-      appName = "メール",
-      mods = { "ctrl" },
-      key = "o",
-    },
-    {
-      id = "app-switcher.safari",
-      description = "Safari を切り替える",
-      appName = "Safari",
-      mods = { "ctrl" },
-      key = "b",
-    },
-    {
-      id = "app-switcher.cmux",
-      description = "cmux を切り替える",
-      appName = "cmux",
-      mods = { "ctrl" },
-      key = "t",
-    },
-    {
-      id = "app-switcher.chatgpt",
-      description = "ChatGPT を切り替える",
-      appName = "ChatGPT",
-      mods = { "ctrl" },
-      key = "r",
-    },
-    {
-      id = "app-switcher.google-chrome",
-      description = "Google Chrome を切り替える",
-      appName = "Google Chrome",
-      mods = { "ctrl" },
-      key = "g",
-    },
-    {
-      id = "app-switcher.notion",
-      description = "Notion を切り替える",
-      appName = "Notion",
-      mods = { "ctrl" },
-      key = "n",
-    },
+    { appName = "Typora", key = "m", dirToOpen = home .. "/Desktop/memo" },  -- 未起動時は ~/Desktop/memo 直下の file を開く。
+    { appName = "Finder", key = "f" },
+    { appName = "メール", key = "o" },
+    { appName = "cmux", key = "t" },
+    { appName = "Zed", key = "r" },
+    { appName = "Google Chrome", key = "g" },
+    { appName = "Notion", key = "n" },
   },
-  unicodeConverter = {
-    id = "unicode-converter.toggle",
-    description = "Unicode converter を切り替える",
-    enabled = false,
-    mods = { "cmd", "shift" },
-    key = "u",
-  },
+  -- cmd+shift+u で文字と code point を相互変換。
+  unicodeConverter = { enabled = false },  -- 現時点で無効
 }
 
 configValidation.validate(config)

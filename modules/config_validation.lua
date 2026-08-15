@@ -1,5 +1,10 @@
+local appHotkeyBlocker = require("modules.app_hotkey_blocker")
+local appSwitcher = require("modules.app_switcher")
+local controlLayer = require("modules.control_layer")
 local hidRemap = require("modules.hid_remap")
 local hotkeyRegistry = require("modules.hotkey_registry")
+local reload = require("modules.reload")
+local unicodeConverter = require("modules.unicode_converter")
 
 local M = {}
 
@@ -103,7 +108,7 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
     if requireTable(errors, "config.controlLayer.arrows", config.controlLayer.arrows) then
       for index, binding in ipairs(config.controlLayer.arrows) do
         local path = string.format("config.controlLayer.arrows[%d]", index)
-        collectHotkey(path, binding, hotkeys)
+        collectHotkey(path, controlLayer.desiredHotkey(binding), hotkeys)
         if type(binding) == "table"
           and requireNonEmptyString(errors, path .. ".arrow", binding.arrow)
         then
@@ -130,22 +135,26 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
   end
 
   if valid.reload then
-    collectHotkey("config.reload", config.reload, hotkeys)
+    collectHotkey("config.reload", reload.desiredHotkey(config.reload), hotkeys)
   end
 
   if valid.appHotkeyBlocker then
-    collectHotkey("config.appHotkeyBlocker", config.appHotkeyBlocker, hotkeys)
+    collectHotkey(
+      "config.appHotkeyBlocker",
+      appHotkeyBlocker.desiredHotkey(config.appHotkeyBlocker),
+      hotkeys
+    )
     requireNonEmptyString(
       errors,
-      "config.appHotkeyBlocker.bundleID",
-      config.appHotkeyBlocker.bundleID
+      "config.appHotkeyBlocker.appName",
+      config.appHotkeyBlocker.appName
     )
   end
 
   if valid.appSwitchers then
     for index, binding in ipairs(config.appSwitchers) do
       local path = string.format("config.appSwitchers[%d]", index)
-      collectHotkey(path, binding, hotkeys)
+      collectHotkey(path, appSwitcher.desiredHotkey(binding), hotkeys)
       if type(binding) == "table" then
         requireNonEmptyString(errors, path .. ".appName", binding.appName)
         if binding.dirToOpen ~= nil and type(binding.dirToOpen) ~= "string" then
@@ -156,7 +165,11 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
   end
 
   if valid.unicodeConverter then
-    collectHotkey("config.unicodeConverter", config.unicodeConverter, hotkeys)
+    collectHotkey(
+      "config.unicodeConverter",
+      unicodeConverter.desiredHotkey(config.unicodeConverter),
+      hotkeys
+    )
   end
 end
 

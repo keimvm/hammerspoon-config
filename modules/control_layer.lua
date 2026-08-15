@@ -4,9 +4,42 @@ local eventtap = hs.eventtap
 local event = eventtap.event
 local types = event.types
 local props = event.properties
+local DEFAULT_MODS = { "ctrl" }
 
 local tap
 local virtualModifierDown = false
+
+local function copyList(list)
+  local copy = {}
+  for index, value in ipairs(list) do
+    copy[index] = value
+  end
+  return copy
+end
+
+function M.desiredHotkey(binding)
+  if type(binding) ~= "table" then return binding end
+
+  local hotkey = {}
+  for key, value in pairs(binding) do
+    hotkey[key] = value
+  end
+
+  if hotkey.mods == nil then
+    hotkey.mods = copyList(DEFAULT_MODS)
+  elseif type(hotkey.mods) == "table" then
+    hotkey.mods = copyList(hotkey.mods)
+  end
+
+  if (type(hotkey.id) ~= "string" or hotkey.id == "")
+    and type(hotkey.arrow) == "string"
+    and hotkey.arrow ~= ""
+  then
+    hotkey.id = "control-layer." .. string.lower(hotkey.arrow)
+  end
+
+  return hotkey
+end
 
 local function markSynthetic(ev, userData)
   if userData then
@@ -25,7 +58,7 @@ local function bindArrowHotkeys(arrows, registry)
     local pressArrow = function()
       hs.eventtap.keyStroke({}, binding.arrow, 0)
     end
-    registry:bind(binding, pressArrow, nil, pressArrow)
+    registry:bind(M.desiredHotkey(binding), pressArrow, nil, pressArrow)
   end
 end
 

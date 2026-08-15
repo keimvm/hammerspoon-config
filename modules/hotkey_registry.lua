@@ -79,7 +79,9 @@ local function validateDefinition(errors, entry)
   if type(hotkey.id) ~= "string" or hotkey.id == "" then
     addDefinitionError(errors, path .. ".id", "must be a non-empty string")
   end
-  if type(hotkey.description) ~= "string" or hotkey.description == "" then
+  if hotkey.description ~= nil
+    and (type(hotkey.description) ~= "string" or hotkey.description == "")
+  then
     addDefinitionError(errors, path .. ".description", "must be a non-empty string")
   end
 
@@ -192,12 +194,10 @@ local function reserve(registry, hotkey, pressedFn, releasedFn, repeatFn)
   if existing then
     error(
       string.format(
-        "duplicate hotkey %s: %s (%s) conflicts with %s (%s)",
+        "duplicate hotkey %s: %s conflicts with %s",
         identity,
         hotkey.id,
-        hotkey.description,
-        existing.id,
-        existing.description
+        existing.id
       ),
       3
     )
@@ -205,7 +205,6 @@ local function reserve(registry, hotkey, pressedFn, releasedFn, repeatFn)
 
   registry.hotkeys[identity] = {
     id = hotkey.id,
-    description = hotkey.description,
   }
 
   return true

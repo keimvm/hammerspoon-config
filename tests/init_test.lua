@@ -37,7 +37,7 @@ test.test("init.lua は Config Preflight 失敗時に runtime side effect を開
   test.equal(0, #state.tasks)
 end)
 
-test.test("既定の App Switcher は ctrl+b/g/r で Safari、Google Chrome、ChatGPT を起動する", function()
+test.test("既定の App Switcher は ctrl+g/r で Google Chrome、Zed を起動する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs
 
@@ -47,9 +47,8 @@ test.test("既定の App Switcher は ctrl+b/g/r で Safari、Google Chrome、Ch
   test.equal(true, ok, err)
 
   local expectedApps = {
-    b = "Safari",
     g = "Google Chrome",
-    r = "ChatGPT",
+    r = "Zed",
   }
 
   for key, appName in pairs(expectedApps) do

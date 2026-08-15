@@ -57,7 +57,7 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 - [ ] 現在の Space の対象 window が minimized の場合、別 Space の window より優先して復帰する。
 - [ ] 現在の Space に対象 window がない場合だけ、別 Space の window へ移動する。
 - [ ] 複数 display を使う場合、どの display でも現在表示中の Space にある window を優先する。
-- [ ] MarkEdit の directory が利用できない場合でも通常起動へ fallback する。
+- [ ] Typora の directory が利用できない場合でも通常起動へ fallback する。
 
 ### Unicode Converter
 

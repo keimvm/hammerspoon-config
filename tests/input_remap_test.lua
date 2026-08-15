@@ -232,34 +232,10 @@ test.test("Control arrow は押下と長押し repeat で同じ arrow を送信�
   local registry = require("modules.hotkey_registry").new()
   require("modules.control_layer").bind({
     arrows = {
-      {
-        id = "control-layer.up",
-        description = "上矢印を送信",
-        mods = { "ctrl" },
-        key = "i",
-        arrow = "up",
-      },
-      {
-        id = "control-layer.left",
-        description = "左矢印を送信",
-        mods = { "ctrl" },
-        key = "j",
-        arrow = "left",
-      },
-      {
-        id = "control-layer.down",
-        description = "下矢印を送信",
-        mods = { "ctrl" },
-        key = "k",
-        arrow = "down",
-      },
-      {
-        id = "control-layer.right",
-        description = "右矢印を送信",
-        mods = { "ctrl" },
-        key = "l",
-        arrow = "right",
-      },
+      { key = "i", arrow = "up" },
+      { key = "j", arrow = "left" },
+      { key = "k", arrow = "down" },
+      { key = "l", arrow = "right" },
     },
   }, registry)
 

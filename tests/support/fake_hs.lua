@@ -30,6 +30,7 @@ function M.app(name, options)
   }
   local focusedWindow = options.focusedWindow
 
+  function app:name() return name end
   function app:bundleID() return options.bundleID or ("test." .. string.lower(name)) end
   function app:allWindows() return self.windows end
   function app:mainWindow() return self.windows[1] end

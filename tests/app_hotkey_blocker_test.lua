@@ -3,10 +3,7 @@ local fakeHs = require("tests.support.fake_hs")
 
 local function blockerConfig()
   return {
-    id = "app-hotkey-blocker.chrome-cmd-d",
-    description = "Google Chrome で cmd+d を無効化",
-    bundleID = "com.google.Chrome",
-    mods = { "cmd" },
+    appName = "Google Chrome",
     key = "d",
   }
 end
@@ -60,6 +57,48 @@ test.test("App Hotkey Blocker は対象 app の activate 中だけ Hotkey を有
     frontmost = true,
   }))
   test.equal(false, hotkey.enabled)
+end)
+
+test.test("App Hotkey Blocker は compact な Desired Hotkey を既定の cmd+key で登録する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  state.frontmostApplication = fakeHs.app("Safari", {
+    bundleID = "com.apple.Safari",
+    frontmost = true,
+  })
+
+  test.resetModule("modules.app_hotkey_blocker")
+  test.resetModule("modules.hotkey_registry")
+
+  local config = blockerConfig()
+  local registry = require("modules.hotkey_registry").new()
+  require("modules.app_hotkey_blocker").start(config, registry)
+
+  test.equal(1, #state.hotkeys)
+  test.equal("d", state.hotkeys[1].key)
+  test.equal(1, #state.hotkeys[1].mods)
+  test.equal("cmd", state.hotkeys[1].mods[1])
+  test.equal(false, state.hotkeys[1].enabled)
+  test.equal(nil, config.id)
+  test.equal(nil, config.mods)
+end)
+
+test.test("App Hotkey Blocker は明示した mods を既定より優先する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+
+  test.resetModule("modules.app_hotkey_blocker")
+  test.resetModule("modules.hotkey_registry")
+
+  local registry = require("modules.hotkey_registry").new()
+  require("modules.app_hotkey_blocker").start({
+    appName = "Google Chrome",
+    mods = { "ctrl" },
+    key = "d",
+  }, registry)
+
+  test.equal(1, #state.hotkeys[1].mods)
+  test.equal("ctrl", state.hotkeys[1].mods[1])
 end)
 
 test.test("App Hotkey Blocker は無効なら Hotkey と watcher を作らない", function()

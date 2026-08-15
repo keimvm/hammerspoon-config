@@ -53,7 +53,7 @@ local function validConfig()
     appHotkeyBlocker = {
       id = "app-hotkey-blocker.chrome-cmd-d",
       description = "Google Chrome で cmd+d を無効化",
-      bundleID = "com.google.Chrome",
+      appName = "Google Chrome",
       mods = { "cmd" },
       key = "d",
     },
@@ -91,7 +91,7 @@ test.test("Config Preflight は feature の必須 field と型を検証する", 
     controlLayer = { arrows = "invalid" },
     reload = { id = "", description = false, mods = "cmd" },
     appSwitchers = { false },
-    appHotkeyBlocker = { bundleID = false },
+    appHotkeyBlocker = { appName = false },
     unicodeConverter = { enabled = "no" },
   })
 
@@ -101,13 +101,12 @@ test.test("Config Preflight は feature の必須 field と型を検証する", 
   test.contains(err, "config.commandKeys.enabled must be a boolean")
   test.contains(err, "config.commandKeys.bindings must be a table")
   test.contains(err, "config.controlLayer.arrows must be a table")
-  test.contains(err, "config.reload.id must be a non-empty string")
   test.contains(err, "config.reload.description must be a non-empty string")
   test.contains(err, "config.reload.mods must be a table")
   test.contains(err, "config.reload.key must be a non-empty string")
   test.contains(err, "config.appSwitchers[1] must be a table")
   test.contains(err, "config.appHotkeyBlocker.id must be a non-empty string")
-  test.contains(err, "config.appHotkeyBlocker.bundleID must be a non-empty string")
+  test.contains(err, "config.appHotkeyBlocker.appName must be a non-empty string")
   test.contains(err, "config.unicodeConverter.enabled must be a boolean")
 end)
 
@@ -202,4 +201,108 @@ test.test("Config Preflight は config を変更せず環境依存の存在確�
   test.equal("control", config.appSwitchers[1].mods[1])
   test.equal("R", config.appSwitchers[1].key)
   test.equal("/path/that/does/not/exist", config.appSwitchers[1].dirToOpen)
+end)
+
+test.test("Config Preflight は compact な App Switcher を受け付け入力を mutate しない", function()
+  local config = validConfig()
+  config.appSwitchers = {
+    {
+      appName = "Safari",
+      key = "b",
+    },
+    {
+      appName = "MarkEdit",
+      key = "m",
+      dirToOpen = "/path/that/does/not/exist",
+    },
+  }
+
+  local ok, result = validate(config)
+
+  test.equal(true, ok, result)
+  test.equal(nil, config.appSwitchers[1].id)
+  test.equal(nil, config.appSwitchers[1].description)
+  test.equal(nil, config.appSwitchers[1].mods)
+  test.equal("Safari", config.appSwitchers[1].appName)
+  test.equal("b", config.appSwitchers[1].key)
+  test.equal("/path/that/does/not/exist", config.appSwitchers[2].dirToOpen)
+end)
+
+test.test("Config Preflight は compact な App Switcher の Hotkey Identity 重複を検出する", function()
+  local config = validConfig()
+  config.appSwitchers = {
+    { appName = "Safari", key = "b" },
+    { appName = "Google Chrome", key = "b" },
+  }
+
+  local ok, err = validate(config)
+
+  test.equal(false, ok)
+  test.contains(
+    err,
+    "config.appSwitchers[2] duplicates Hotkey Identity ctrl+b from config.appSwitchers[1]"
+  )
+end)
+
+test.test("Config Preflight は compact な Control arrow を受け付け入力を mutate しない", function()
+  local config = validConfig()
+  config.controlLayer.arrows = {
+    { key = "i", arrow = "up" },
+    { key = "j", arrow = "left" },
+  }
+  config.reload.description = nil
+  config.appHotkeyBlocker.description = nil
+  config.unicodeConverter.description = nil
+
+  local ok, result = validate(config)
+
+  test.equal(true, ok, result)
+  test.equal(nil, config.controlLayer.arrows[1].id)
+  test.equal(nil, config.controlLayer.arrows[1].description)
+  test.equal(nil, config.controlLayer.arrows[1].mods)
+  test.equal("i", config.controlLayer.arrows[1].key)
+  test.equal("up", config.controlLayer.arrows[1].arrow)
+  test.equal(nil, config.reload.description)
+end)
+
+test.test("Config Preflight は compact な App Hotkey Blocker を受け付け入力を mutate しない", function()
+  local config = validConfig()
+  config.appHotkeyBlocker = {
+    appName = "Google Chrome",
+    key = "d",
+  }
+
+  local ok, result = validate(config)
+
+  test.equal(true, ok, result)
+  test.equal(nil, config.appHotkeyBlocker.id)
+  test.equal(nil, config.appHotkeyBlocker.description)
+  test.equal(nil, config.appHotkeyBlocker.mods)
+  test.equal("Google Chrome", config.appHotkeyBlocker.appName)
+  test.equal("d", config.appHotkeyBlocker.key)
+end)
+
+test.test("Config Preflight は compact な Reload を受け付け入力を mutate しない", function()
+  local config = validConfig()
+  config.reload = { key = "F5" }
+
+  local ok, result = validate(config)
+
+  test.equal(true, ok, result)
+  test.equal(nil, config.reload.id)
+  test.equal(nil, config.reload.mods)
+  test.equal("F5", config.reload.key)
+end)
+
+test.test("Config Preflight は compact な Unicode Converter を受け付け入力を mutate しない", function()
+  local config = validConfig()
+  config.unicodeConverter = { enabled = false }
+
+  local ok, result = validate(config)
+
+  test.equal(true, ok, result)
+  test.equal(nil, config.unicodeConverter.id)
+  test.equal(nil, config.unicodeConverter.mods)
+  test.equal(nil, config.unicodeConverter.key)
+  test.equal(false, config.unicodeConverter.enabled)
 end)

@@ -43,16 +43,15 @@ App Switcher Hotkey は、対象 app が未起動なら起動、frontmost なら
 
 | Hotkey   | App           |
 | -------- | ------------- |
-| `ctrl+m` | MarkEdit      |
+| `ctrl+m` | Typora        |
 | `ctrl+f` | Finder        |
 | `ctrl+o` | メール        |
-| `ctrl+b` | Safari        |
 | `ctrl+t` | cmux          |
-| `ctrl+r` | ChatGPT       |
+| `ctrl+r` | Zed           |
 | `ctrl+g` | Google Chrome |
 | `ctrl+n` | Notion        |
 
-MarkEdit は、未起動時に `~/Desktop/memo` 直下の file をまとめて開きます。directory が利用できない場合は通常起動します。
+Typora は、未起動時に `~/Desktop/memo` 直下の file をまとめて開きます。directory が利用できない場合は通常起動します。
 
 ### Unicode Converter
 
@@ -71,11 +70,11 @@ MarkEdit は、未起動時に `~/Desktop/memo` 直下の file をまとめて�
 | `config.commandKeys`         | Command key 単体押しの ON/OFF と出力 key code |
 | `config.controlLayer.arrows` | cursor 操作用 Hotkey                          |
 | `config.reload`              | frontmost app へ `cmd+r` を送る Hotkey        |
-| `config.appHotkeyBlocker`    | 対象 app で無効化する Hotkey と bundle ID     |
+| `config.appHotkeyBlocker`    | 対象 app で無効化する Hotkey と app 名        |
 | `config.appSwitchers`        | App Switcher の app、Hotkey、directory        |
 | `config.unicodeConverter`    | Unicode Converter の ON/OFF と Hotkey         |
 
-Hotkey の共通 field は、一意な `id`、用途を示す `description`、modifier 配列の `mods`、通常 key の `key` です。`enabled = false` を指定すると登録しません。
+Hotkey の共通 field は modifier 配列の `mods` と通常 key の `key` です。`id` は省略時に各 feature が導出します。用途の説明は `init.lua` のコメントで十分で、`description` は不要です。`enabled = false` を指定すると登録しません。`enabled` を省略した場合は有効です。`mods` を省略した場合の既定値は feature ごとに異なります。App Switcher と Control arrow は `{ "ctrl" }`、App Hotkey Blocker は `{ "cmd" }`、Reload は `{}`、Unicode Converter は `{ "cmd", "shift" }` です。
 
 ### Modifier remap を変更する
 
@@ -83,26 +82,18 @@ Hotkey の共通 field は、一意な `id`、用途を示す `description`、mo
 
 ### App Switcher を変更する
 
-各 entry は共通 Hotkey field に加え、`.app` を除いた bundle 名を示す `appName` と、未起動時に開く任意の directory `dirToOpen` を使います。
+各 entry は対象 app の `appName` と `key` を書きます。未起動時に開く directory がある場合だけ `dirToOpen` を足します。`id` は省略時に App Switcher が導出し、`mods` の既定値は `{ "ctrl" }` です。
 
-たとえば `ctrl+r` は変えず、対象を `/Applications/ChatGPT.app` から `/Applications/Codex.app` へ変更する場合は、既存 entry の3行だけを書き換えます。
+たとえば `ctrl+r` は変えず、対象を `/Applications/ChatGPT.app` から `/Applications/Codex.app` へ変更する場合は、`appName` だけを書き換えます。
 
 ```diff
- {
--  id = "app-switcher.chatgpt",
--  description = "ChatGPT を切り替える",
--  appName = "ChatGPT",
-+  id = "app-switcher.codex",
-+  description = "Codex を切り替える",
-+  appName = "Codex",
-   mods = { "ctrl" },
-   key = "r",
- },
+-  { appName = "ChatGPT", key = "r" },
++  { appName = "Codex", key = "r" },
 ```
 
 - `appName` は実際の app bundle 名に合わせます。別名の app は別 bundle として扱います。
-- ショートカットも変える場合は `mods` と `key` を変更します。
-- 追加する場合は entry を複製し、`id` と `mods + key` を一意にします。
+- ショートカットの key を変える場合は `key` を変更します。既定以外の modifier を使う場合だけ `mods` を指定します。
+- 追加する場合は `{ appName = "...", key = "..." }` を足し、`key`（と `mods`）を一意にします。
 - 一時的に止める場合は `enabled = false`、削除する場合は entry 全体を削除します。
 - 旧 app 専用の `dirToOpen` は、新しい app で不要なら削除します。
 
@@ -110,13 +101,13 @@ Hotkey の共通 field は、一意な `id`、用途を示す `description`、mo
 
 ### App Hotkey Blocker を変更する
 
-`config.appHotkeyBlocker` は、`bundleID` が一致する app が frontmost の間だけ指定した Hotkey を有効にし、app 本来の操作を無効化します。初期設定では Google Chrome (`com.google.Chrome`) の `cmd+d` を無効化します。ほかの app が frontmost の間は `cmd+d` を妨げません。
+`config.appHotkeyBlocker` は、`appName` が一致する app が frontmost の間だけ指定した Hotkey を有効にし、app 本来の操作を無効化します。初期設定では Google Chrome の `cmd+d` を無効化します。ほかの app が frontmost の間は `cmd+d` を妨げません。`id` は省略時に App Hotkey Blocker が導出し、`mods` の既定値は `{ "cmd" }` です。
 
-一時的に止める場合は `enabled = false` を追加します。Chrome Beta や Chrome Canary を対象にする場合は、実際の bundle ID に合わせて `bundleID` を変更します。
+一時的に止める場合は `enabled = false` を追加します。Chrome Beta や Chrome Canary を対象にする場合は、実際の app 名に合わせて `appName` を変更します。
 
 ### その他の Hotkey を変更する
 
-`config.reload`、`config.controlLayer.arrows`、`config.unicodeConverter` の対象 entry で `mods` と `key` を変更します。既存の全 Hotkey と重複しない組み合わせを指定してください。Unicode Converter は `enabled` を `true` / `false` にして切り替えます。
+`config.reload` は `{ key = "F5" }` のように `key` を書きます。`id` は省略時に導出し、`mods` の既定値は `{}` です。Control arrow は `{ key = "i", arrow = "up" }` のように `key` と `arrow` を書き、`id` は省略時に `arrow` から導出します。既存の全 Hotkey と重複しない組み合わせを指定してください。Unicode Converter は `enabled` を `true` / `false` にして切り替えます。Hotkey を変える場合だけ `mods` と `key` を指定し、省略時は `cmd+shift+u` です。
 
 ## 変更を反映・検証する
 

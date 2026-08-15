@@ -16,11 +16,7 @@ test.test("Unicode Converter は enabled 設定で Hotkey 登録を切り替え�
   local registry = require("modules.hotkey_registry").new()
   require("modules.bindings").bind({
     unicodeConverter = {
-      id = "unicode-converter.toggle",
-      description = "Unicode converter を切り替える",
       enabled = false,
-      mods = { "cmd", "shift" },
-      key = "u",
     },
   }, registry)
 
@@ -30,19 +26,42 @@ test.test("Unicode Converter は enabled 設定で Hotkey 登録を切り替え�
   _G.hs = hs
   resetUnicodeModules()
   registry = require("modules.hotkey_registry").new()
+  local converter = {
+    enabled = true,
+  }
   require("modules.bindings").bind({
-    unicodeConverter = {
-      id = "unicode-converter.toggle",
-      description = "Unicode converter を切り替える",
-      enabled = true,
-      mods = { "cmd", "shift" },
-      key = "u",
-    },
+    unicodeConverter = converter,
   }, registry)
 
   test.equal(1, #state.hotkeys)
+  test.equal("u", state.hotkeys[1].key)
+  test.equal(2, #state.hotkeys[1].mods)
+  test.equal("cmd", state.hotkeys[1].mods[1])
+  test.equal("shift", state.hotkeys[1].mods[2])
+  test.equal(nil, converter.id)
+  test.equal(nil, converter.mods)
+  test.equal(nil, converter.key)
   state.hotkeys[1].pressedFn()
   test.equal(true, state.choosers[1].visible)
+end)
+
+test.test("Unicode Converter は明示した mods と key を既定より優先する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  resetUnicodeModules()
+
+  local registry = require("modules.hotkey_registry").new()
+  require("modules.bindings").bind({
+    unicodeConverter = {
+      enabled = true,
+      mods = { "ctrl" },
+      key = "b",
+    },
+  }, registry)
+
+  test.equal("b", state.hotkeys[1].key)
+  test.equal(1, #state.hotkeys[1].mods)
+  test.equal("ctrl", state.hotkeys[1].mods[1])
 end)
 
 test.test("Unicode Converter は code point を文字へ変換する", function()

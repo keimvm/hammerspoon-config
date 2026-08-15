@@ -217,6 +217,45 @@ test.test("App Switcher は dirToOpen が利用できない場合に通常 launc
   test.equal("MarkEdit", state.launchedApps[1])
 end)
 
+test.test("App Switcher は compact な Desired Hotkey を既定の ctrl+key で登録する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hotkey_registry")
+  local registry = require("modules.hotkey_registry").new()
+  local binding = {
+    appName = "Safari",
+    key = "b",
+  }
+
+  loadAppSwitcher(hs).bindToggle(binding, registry)
+
+  test.equal(1, #state.hotkeys)
+  test.equal("b", state.hotkeys[1].key)
+  test.equal(1, #state.hotkeys[1].mods)
+  test.equal("ctrl", state.hotkeys[1].mods[1])
+  state.hotkeys[1].pressedFn()
+  test.equal("Safari", state.launchedApps[1])
+  test.equal(nil, binding.id)
+  test.equal(nil, binding.description)
+  test.equal(nil, binding.mods)
+end)
+
+test.test("App Switcher は明示した mods を既定より優先する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hotkey_registry")
+  local registry = require("modules.hotkey_registry").new()
+
+  loadAppSwitcher(hs).bindToggle({
+    appName = "Safari",
+    mods = { "cmd" },
+    key = "b",
+  }, registry)
+
+  test.equal(1, #state.hotkeys[1].mods)
+  test.equal("cmd", state.hotkeys[1].mods[1])
+end)
+
 test.test("App Switcher は dirToOpen が空の場合に通常 launch へ fallback する", function()
   local hs, state = fakeHs.new()
   local entries = { ".", ".." }
