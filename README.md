@@ -1,121 +1,87 @@
 # Hammerspoon Config
 
-macOS 用の Hammerspoon 設定です。利用者が変更する設定値は `init.lua`、動作の実装は `modules/` に分けています。
+macOS 用の Hammerspoon 設定です。利用者が変える値は `init.lua` の `config`、動作の実装は `modules/` にあります。いま有効な割り当ては `init.lua` を見てください。この文書は始め方と、設定の直し方だけを持ちます。
 
 > [!IMPORTANT]
-> 初期設定では、読み込み時に物理 `caps_lock` を `left_control`、物理 `left_control` を `left_command` へ remap します。初回の **Reload Config** 前に、`init.lua` の `config.hidRemap` が自分の keyboard 環境に合うことを確認してください。
+> 初期設定は、読み込み時に物理 `caps_lock` を `left_control`、物理 `left_control` を `left_command` へ remap します。初回の **Reload Config** の前に、`config.hidRemap` が自分の keyboard に合うことを確認してください。
 
-## セットアップ
+## はじめる
 
-1. [Hammerspoon](https://www.hammerspoon.org/go/) をインストールします。Homebrew を使う場合は次を実行します。
+1. [Hammerspoon](https://www.hammerspoon.org/go/) を入れます。Homebrew なら次です。
 
    ```sh
    brew install --cask hammerspoon
    ```
 
-2. この repo の内容を `~/.hammerspoon` に配置します。Hammerspoon は `~/.hammerspoon/init.lua` を読み込みます。
-3. Hammerspoon を起動する前に、後述の手順で `init.lua` を自分の環境に合わせます。
-4. Automated Verification に使う `lua` と `luac` がない場合はインストールします。
+2. この repo を `~/.hammerspoon` に置きます。Hammerspoon は `~/.hammerspoon/init.lua` を読みます。
+3. Hammerspoon を起動する前に、`init.lua` の `config` を自分の環境に合わせます。最低限、`hidRemap` と `appSwitchers` を確認します。
+4. 検証に使う `lua` と `luac` がなければ入れます。
 
    ```sh
    brew install lua
    ```
 
-5. Hammerspoon を起動して Accessibility access を許可し、「変更を反映・検証する」の手順を実行します。
+5. Hammerspoon を起動し、Accessibility access を許可します。
+6. Hammerspoon menu の **Reload Config** を実行し、Console に error がないことを確認します。
 
-## 現在の操作
+操作できなくなったときは、[操作を戻す](#操作を戻す) へ進みます。
 
-### Keyboard
+## 何が動くか
 
-| 操作                            | 動作                            |
-| ------------------------------- | ------------------------------- |
-| 物理 `caps_lock`                | `left_control`                  |
-| 物理 `left_control`             | `left_command`                  |
-| 左 Command key の単体押し       | `英数`                          |
-| 右 Command key の単体押し       | `かな`                          |
-| `ctrl+i/j/k/l`                  | `up/left/down/right`            |
-| `F5`                            | frontmost app へ `cmd+r` を送信 |
-| Chrome が frontmost の `cmd+d`  | 無効                            |
+各機能の割り当てと ON/OFF は `init.lua` の該当 field が正です。ここには、設定を開いたときに迷わないための役割だけを書きます。
+
+| 設定 | 役割 |
+| --- | --- |
+| `config.hidRemap` | 物理キーの Input Remap。指定できる key は `caps_lock`、`left_control`、`left_command` |
+| `config.commandKeys` | Command key の単体押し。初期設定は JIS の `英数` / `かな` |
+| `config.controlLayer.arrows` | cursor 操作用 Hotkey |
+| `config.reload` | frontmost app へ `cmd+r` を送る Hotkey。Hammerspoon 自身の reload ではない |
+| `config.appHotkeyBlocker` | 対象 app が frontmost の間だけ、指定 Hotkey で app 本来の操作を無効化する |
+| `config.appSwitchers` | 対象 app の起動、focus、hide、window cycle |
+| `config.unicodeConverter` | 文字と code point の相互変換。初期設定では無効 |
+
+App Switcher は、対象 app が未起動なら起動、frontmost なら app 全体を hide、それ以外なら focus します。複数 window がある場合は、各 display で現在表示中の Space にある window だけを cycle します。いまの Space に対象 window がない場合だけ、別の Space へ移動します。
+
+## 設定の直し方
+
+通常は `init.lua` の `config` だけを変えます。`modules/` は実装なので、機能追加や不具合修正のとき以外は触りません。
+
+Hotkey の共通 field は `mods` と `key` です。`mods` は各 entry で `{ "ctrl" }` のように明示します。`id` は省略でき、各 feature が導出します。`enabled = false` を付けると登録しません。`enabled` を省略したときは有効です。
+
+同じ `mods + key` を複数の有効な設定に使うと、Config Preflight が `duplicates Hotkey Identity` error を出して reload を中止します。新しい entry を足すのではなく置き換える場合は、元の entry を編集します。
 
 ### App Switcher
 
-App Switcher Hotkey は、対象 app が未起動なら起動、frontmost なら app 全体を hide、それ以外なら focus します。複数 window がある場合は、各 display で現在表示中の Space にある window だけを cycle します。現在表示中の Space に対象 window がない場合だけ、別の Space にある window へ移動します。
+各 entry は対象 app の `appName`、`mods`、`key` です。`appName` は実際の app bundle 名に合わせます。
 
-| Hotkey   | App           |
-| -------- | ------------- |
-| `ctrl+m` | Typora        |
-| `ctrl+f` | Finder        |
-| `ctrl+o` | メール        |
-| `ctrl+t` | cmux          |
-| `ctrl+r` | Zed           |
-| `ctrl+g` | Google Chrome |
-| `ctrl+n` | Notion        |
-
-### Unicode Converter
-
-初期設定では無効です。`config.unicodeConverter.enabled = true` にすると `cmd+shift+u` で開きます。
-
-- `あ` -> `U+3042`
-- `U+3042`、`0x3042`、`3042` -> `あ`
-
-## 設定を変更する
-
-通常は `init.lua` の `config` だけを変更します。
-
-| 設定                         | 変更内容                                      |
-| ---------------------------- | --------------------------------------------- |
-| `config.hidRemap`            | modifier remap の ON/OFF と mapping           |
-| `config.commandKeys`         | Command key 単体押しの ON/OFF と出力 key code |
-| `config.controlLayer.arrows` | cursor 操作用 Hotkey                          |
-| `config.reload`              | frontmost app へ `cmd+r` を送る Hotkey        |
-| `config.appHotkeyBlocker`    | 対象 app で無効化する Hotkey と app 名        |
-| `config.appSwitchers`        | App Switcher の app と Hotkey                 |
-| `config.unicodeConverter`    | Unicode Converter の ON/OFF と Hotkey         |
-
-Hotkey の共通 field は modifier 配列の `mods` と通常 key の `key` です。`id` は省略時に各 feature が導出します。用途の説明は `init.lua` のコメントで十分で、`description` は不要です。`enabled = false` を指定すると登録しません。`enabled` を省略した場合は有効です。`mods` は各 entry で `{ "ctrl" }` のように明示します。
-
-### Modifier remap を変更する
-
-`config.hidRemap.enabled = false` にすると、reload 時にこの設定が適用した remap を解除します。mapping を変える場合は、`mappings` の `from` と `to` を編集します。現在指定できる key は `caps_lock`、`left_control`、`left_command` です。
-
-### App Switcher を変更する
-
-各 entry は対象 app の `appName`、`mods`、`key` を書きます。`id` は省略時に App Switcher が導出します。
-
-たとえば `ctrl+r` は変えず、対象を `/Applications/ChatGPT.app` から `/Applications/Codex.app` へ変更する場合は、`appName` だけを書き換えます。
-
-```diff
--  { appName = "ChatGPT", mods = { "ctrl" }, key = "r" },
-+  { appName = "Codex", mods = { "ctrl" }, key = "r" },
+```lua
+{ appName = "対象の app 名", mods = { "ctrl" }, key = "r" },
 ```
 
-- `appName` は実際の app bundle 名に合わせます。別名の app は別 bundle として扱います。
-- ショートカットの key を変える場合は `key` を変更します。modifier を変える場合は `mods` を変更します。
-- 追加する場合は `{ appName = "...", mods = { "ctrl" }, key = "..." }` を足し、`key`（と `mods`）を一意にします。
-- 一時的に止める場合は `enabled = false`、削除する場合は entry 全体を削除します。
+- 対象だけ変えるときは `appName` を書き換えます。
+- ショートカットを変えるときは `key` または `mods` を変えます。
+- 足すときは同じ形の entry を追加し、`mods + key` を一意にします。
+- 一時停止は `enabled = false`、削除は entry 全体を消します。
 
-同じ `mods + key` を複数の有効な設定に使うと、Config Preflight が `duplicates Hotkey Identity` error を出して reload を中止します。新しい entry を追加するのではなく、既存の割り当てを置き換える場合は元の entry を編集してください。
+### そのほか
 
-### App Hotkey Blocker を変更する
+- **Input Remap を止める**: `config.hidRemap.enabled = false`。reload すると、この設定が適用した remap を解除します。mapping を変えるときは `mappings` の `from` と `to` を編集します。
+- **App Hotkey Blocker**: 対象 app が frontmost の間だけ有効です。止めるときは `enabled = false`。Chrome Beta など別名の app は、実際の app 名に `appName` を合わせます。
+- **Control arrow**: `{ mods = { "ctrl" }, key = "i", arrow = "up" }` の形です。`id` は省略時に `arrow` から導出します。
+- **Unicode Converter**: `enabled` を `true` にすると登録します。変換例は `あ` ↔ `U+3042` です。`U+3042`、`0x3042`、`3042` を受け付けます。
 
-`config.appHotkeyBlocker` は、`appName` が一致する app が frontmost の間だけ指定した Hotkey を有効にし、app 本来の操作を無効化します。初期設定では Google Chrome の `cmd+d` を無効化します。ほかの app が frontmost の間は `cmd+d` を妨げません。`id` は省略時に App Hotkey Blocker が導出します。
-
-一時的に止める場合は `enabled = false` を追加します。Chrome Beta や Chrome Canary を対象にする場合は、実際の app 名に合わせて `appName` を変更します。
-
-### その他の Hotkey を変更する
-
-`config.reload` と `config.unicodeConverter` の対象 entry で `mods` と `key` を変更します。Control arrow は `{ mods = { "ctrl" }, key = "i", arrow = "up" }` のように書き、`id` は省略時に `arrow` から導出します。既存の全 Hotkey と重複しない組み合わせを指定してください。Unicode Converter は `enabled` を `true` / `false` にして切り替えます。
-
-## 変更を反映・検証する
+## 変更を反映する
 
 1. repo root で `./scripts/check` を実行します。
-2. Hammerspoon menu の **Reload Config** を実行します。`F5` は Hammerspoon の reload ではありません。
-3. Console に error がないことを確認します。Config Preflight error がある場合は、表示された `config...` の field path を修正します。
-4. 変更した Hotkey と、その変更によって重複する可能性がある Hotkey を実機で確認します。
+2. Hammerspoon menu の **Reload Config** を実行します。`config.reload` の Hotkey は Hammerspoon の reload ではありません。
+3. Console に error がないことを確認します。Config Preflight error なら、表示された `config...` の field path を直します。
+4. 変えた操作と、重複しそうな既存の操作を実機で確認します。
 
-App Switcher を変更した場合は、対象 app の起動、focus、hide、必要に応じて window cycle を確認します。全機能の checklist は [`docs/verification.md`](docs/verification.md) を参照してください。
+App Switcher を変えたときは、対象 app の起動、focus、hide、必要なら window cycle を確認します。全機能の checklist は [`docs/verification.md`](docs/verification.md) です。
 
-modifier remap により操作できなくなった場合は、別の terminal または入力手段から次を実行して解除し、設定を修正してから reload します。
+## 操作を戻す
+
+modifier remap で操作できなくなったら、別の terminal または入力手段から次を実行して解除し、設定を直してから reload します。
 
 ```sh
 hidutil property --set '{"UserKeyMapping":[]}'
