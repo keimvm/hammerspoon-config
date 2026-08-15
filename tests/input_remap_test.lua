@@ -223,7 +223,7 @@ test.test("Command key は無効時に eventtap を開始しない", function()
   test.equal(0, #state.eventtaps)
 end)
 
-test.test("Control arrow は押下と長押し repeat で同じ arrow を送信する", function()
+test.test("Control Layer は押下と長押し repeat で同じ送り先キーを送信する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs
   test.resetModule("modules.hotkey_registry")
@@ -231,11 +231,13 @@ test.test("Control arrow は押下と長押し repeat で同じ arrow を送信�
 
   local registry = require("modules.hotkey_registry").new()
   require("modules.control_layer").bind({
-    arrows = {
-      { key = "i", arrow = "up" },
-      { key = "j", arrow = "left" },
-      { key = "k", arrow = "down" },
-      { key = "l", arrow = "right" },
+    bindings = {
+      { key = "i", to = "up" },
+      { key = "j", to = "left" },
+      { key = "k", to = "down" },
+      { key = "l", to = "right" },
+      { key = "h", to = "delete" },
+      { key = "d", to = "forwarddelete" },
     },
   }, registry)
 
@@ -244,7 +246,7 @@ test.test("Control arrow は押下と長押し repeat で同じ arrow を送信�
     hotkey.repeatFn()
   end
 
-  test.equal(8, #state.keyStrokes)
+  test.equal(12, #state.keyStrokes)
   test.equal("up", state.keyStrokes[1].key)
   test.equal("up", state.keyStrokes[2].key)
   test.equal("left", state.keyStrokes[3].key)
@@ -253,5 +255,9 @@ test.test("Control arrow は押下と長押し repeat で同じ arrow を送信�
   test.equal("down", state.keyStrokes[6].key)
   test.equal("right", state.keyStrokes[7].key)
   test.equal("right", state.keyStrokes[8].key)
+  test.equal("delete", state.keyStrokes[9].key)
+  test.equal("delete", state.keyStrokes[10].key)
+  test.equal("forwarddelete", state.keyStrokes[11].key)
+  test.equal("forwarddelete", state.keyStrokes[12].key)
   test.equal(0, #state.eventtaps)
 end)

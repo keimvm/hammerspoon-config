@@ -20,6 +20,10 @@ _Avoid_: Binding key, shortcut id
 `init.lua` に宣言される、登録したい Hotkey の設定。Hotkey Registry が検証と登録を行う前の意図を表す。
 _Avoid_: Hotkey config, shortcut setting
 
+**Control Layer**:
+修飾付き Desired Hotkey を、別キーの入力として送る feature。組み合わせと送り先は `init.lua` の設定が表す。
+_Avoid_: Input Remap, App Hotkey Blocker, emacs layer
+
 **App Hotkey Blocker**:
 対象 app が frontmost の間だけ Hotkey を有効にし、app 本来の操作を無効化する feature。対象 app と Hotkey の選択は `init.lua` の設定が表す。
 _Avoid_: Global Hotkey, Input Remap

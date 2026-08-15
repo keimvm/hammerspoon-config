@@ -21,13 +21,15 @@ local config = configOverride or {
   },
   -- F5: frontmost app に対して cmd+r。
   reload = { mods = {}, key = "F5" },
-  -- ctrl+i/j/k/l → 矢印
+  -- ctrl+i/j/k/l → 矢印、ctrl+h → 後方削除、ctrl+d → 前方削除
   controlLayer = {
-    arrows = {
-      { mods = { "ctrl" }, key = "i", arrow = "up" },
-      { mods = { "ctrl" }, key = "j", arrow = "left" },
-      { mods = { "ctrl" }, key = "k", arrow = "down" },
-      { mods = { "ctrl" }, key = "l", arrow = "right" },
+    bindings = {
+      { mods = { "ctrl" }, key = "i", to = "up" },
+      { mods = { "ctrl" }, key = "j", to = "left" },
+      { mods = { "ctrl" }, key = "k", to = "down" },
+      { mods = { "ctrl" }, key = "l", to = "right" },
+      { mods = { "ctrl" }, key = "h", to = "delete" },
+      { mods = { "ctrl" }, key = "d", to = "forwarddelete" },
     },
   },
   -- Command 単体押しで入力ソースを切り替える。（JIS keyboard: 0x66 = 英数, 0x68 = かな）

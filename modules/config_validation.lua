@@ -105,14 +105,14 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
   end
 
   if valid.controlLayer then
-    if requireTable(errors, "config.controlLayer.arrows", config.controlLayer.arrows) then
-      for index, binding in ipairs(config.controlLayer.arrows) do
-        local path = string.format("config.controlLayer.arrows[%d]", index)
+    if requireTable(errors, "config.controlLayer.bindings", config.controlLayer.bindings) then
+      for index, binding in ipairs(config.controlLayer.bindings) do
+        local path = string.format("config.controlLayer.bindings[%d]", index)
         collectHotkey(path, controlLayer.desiredHotkey(binding), hotkeys)
         if type(binding) == "table"
-          and requireNonEmptyString(errors, path .. ".arrow", binding.arrow)
+          and requireNonEmptyString(errors, path .. ".to", binding.to)
         then
-          validateKnownKey(errors, path .. ".arrow", binding.arrow)
+          validateKnownKey(errors, path .. ".to", binding.to)
         end
       end
     end

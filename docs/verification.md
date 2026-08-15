@@ -38,6 +38,8 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 - [ ] `hidRemap.enabled = false` に変更して reload すると `UserKeyMapping` が空になり、`true` に戻して reload すると上記2 mapping が復旧する。
 - [ ] 物理 `caps_lock+i/j/k/l` がそれぞれ `up/left/down/right` として動く。
 - [ ] `caps_lock+i/j/k/l` の長押しで arrow が repeat する。
+- [ ] 物理 `caps_lock+h` が後方削除、`caps_lock+d` が前方削除として動く。
+- [ ] `caps_lock+h/d` の長押しで削除が repeat する。
 - [ ] 物理 `left_control` を Command key として使える。
 - [ ] 左 Command key の単体押しで `英数`、右 Command key の単体押しで `かな` に切り替わる。
 - [ ] Command key を shortcut chord として使った場合、単体押しの入力切替が発火しない。

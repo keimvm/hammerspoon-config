@@ -34,7 +34,7 @@ macOS 用の Hammerspoon 設定です。利用者が変える値は `init.lua` �
 | --- | --- |
 | `config.hidRemap` | 物理キーの Input Remap。指定できる key は `caps_lock`、`left_control`、`left_command` |
 | `config.commandKeys` | Command key の単体押し。初期設定は JIS の `英数` / `かな` |
-| `config.controlLayer.arrows` | cursor 操作用 Hotkey |
+| `config.controlLayer.bindings` | 修飾付き Hotkey で別キーを送る。初期設定は矢印と削除 |
 | `config.reload` | frontmost app へ `cmd+r` を送る Hotkey。Hammerspoon 自身の reload ではない |
 | `config.appHotkeyBlocker` | 対象 app が frontmost の間だけ、指定 Hotkey で app 本来の操作を無効化する |
 | `config.appSwitchers` | 対象 app の起動、focus、hide、window cycle |
@@ -67,7 +67,7 @@ Hotkey の共通 field は `mods` と `key` です。`mods` は各 entry で `{ 
 
 - **Input Remap を止める**: `config.hidRemap.enabled = false`。reload すると、この設定が適用した remap を解除します。mapping を変えるときは `mappings` の `from` と `to` を編集します。
 - **App Hotkey Blocker**: 対象 app が frontmost の間だけ有効です。止めるときは `enabled = false`。Chrome Beta など別名の app は、実際の app 名に `appName` を合わせます。
-- **Control arrow**: `{ mods = { "ctrl" }, key = "i", arrow = "up" }` の形です。`id` は省略時に `arrow` から導出します。
+- **Control Layer**: `{ mods = { "ctrl" }, key = "h", to = "delete" }` の形です。`id` は省略時に `to` から導出します。後方削除は `delete`、前方削除は `forwarddelete` です。
 - **Unicode Converter**: `enabled` を `true` にすると登録します。変換例は `あ` ↔ `U+3042` です。`U+3042`、`0x3042`、`3042` を受け付けます。
 
 ## 変更を反映する

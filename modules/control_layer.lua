@@ -32,10 +32,10 @@ function M.desiredHotkey(binding)
   end
 
   if (type(hotkey.id) ~= "string" or hotkey.id == "")
-    and type(hotkey.arrow) == "string"
-    and hotkey.arrow ~= ""
+    and type(hotkey.to) == "string"
+    and hotkey.to ~= ""
   then
-    hotkey.id = "control-layer." .. string.lower(hotkey.arrow)
+    hotkey.id = "control-layer." .. string.lower(hotkey.to)
   end
 
   return hotkey
@@ -53,19 +53,19 @@ local function postModifier(key, isDown, userData)
   virtualModifierDown = isDown
 end
 
-local function bindArrowHotkeys(arrows, registry)
-  for _, binding in ipairs(arrows or {}) do
-    local pressArrow = function()
-      hs.eventtap.keyStroke({}, binding.arrow, 0)
+local function bindHotkeys(bindings, registry)
+  for _, binding in ipairs(bindings or {}) do
+    local emit = function()
+      hs.eventtap.keyStroke({}, binding.to, 0)
     end
-    registry:bind(M.desiredHotkey(binding), pressArrow, nil, pressArrow)
+    registry:bind(M.desiredHotkey(binding), emit, nil, emit)
   end
 end
 
 function M.bind(config, registry)
   config = config or {}
 
-  bindArrowHotkeys(config.arrows, registry)
+  bindHotkeys(config.bindings, registry)
 
   if config.sentinelCommand and config.sentinelCommand.enabled ~= false then
     local sentinelKeyCode = hs.keycodes.map[config.sentinelCommand.sentinelKey]

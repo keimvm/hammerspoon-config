@@ -66,6 +66,39 @@ test.test("既定の App Switcher は ctrl+g/r で Google Chrome、Zed を起動
   end
 end)
 
+test.test("既定の Control Layer は ctrl+h/d で後方削除と前方削除を送信する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+
+  resetModules()
+
+  local ok, err = pcall(dofile, "init.lua")
+  test.equal(true, ok, err)
+
+  local expectedKeys = {
+    h = "delete",
+    d = "forwarddelete",
+  }
+
+  for key, emitted in pairs(expectedKeys) do
+    local matchingHotkey
+    for _, hotkey in ipairs(state.hotkeys) do
+      if hotkey.key == key and #hotkey.mods == 1 and hotkey.mods[1] == "ctrl" then
+        matchingHotkey = hotkey
+        break
+      end
+    end
+
+    test.truthy(matchingHotkey, "ctrl+" .. key .. " が登録されていません")
+    state.keyStrokes = {}
+    matchingHotkey.pressedFn()
+    matchingHotkey.repeatFn()
+    test.equal(2, #state.keyStrokes)
+    test.equal(emitted, state.keyStrokes[1].key)
+    test.equal(emitted, state.keyStrokes[2].key)
+  end
+end)
+
 test.test("既定の App Hotkey Blocker は Google Chrome の frontmost 中だけ cmd+d を無効化する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs

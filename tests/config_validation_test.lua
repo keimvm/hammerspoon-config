@@ -25,13 +25,13 @@ local function validConfig()
       },
     },
     controlLayer = {
-      arrows = {
+      bindings = {
         {
           id = "control-layer.up",
           description = "上矢印を送信",
           mods = { "ctrl" },
           key = "i",
-          arrow = "up",
+          to = "up",
         },
       },
     },
@@ -88,7 +88,7 @@ test.test("Config Preflight は feature の必須 field と型を検証する", 
   local ok, err = validate({
     hidRemap = { enabled = "yes", mappings = false },
     commandKeys = { enabled = 1, bindings = "invalid" },
-    controlLayer = { arrows = "invalid" },
+    controlLayer = { bindings = "invalid" },
     reload = { id = "", description = false, mods = "cmd" },
     appSwitchers = { false },
     appHotkeyBlocker = { appName = false },
@@ -100,7 +100,7 @@ test.test("Config Preflight は feature の必須 field と型を検証する", 
   test.contains(err, "config.hidRemap.mappings must be a table")
   test.contains(err, "config.commandKeys.enabled must be a boolean")
   test.contains(err, "config.commandKeys.bindings must be a table")
-  test.contains(err, "config.controlLayer.arrows must be a table")
+  test.contains(err, "config.controlLayer.bindings must be a table")
   test.contains(err, "config.reload.description must be a non-empty string")
   test.contains(err, "config.reload.mods must be a table")
   test.contains(err, "config.reload.key must be a non-empty string")
@@ -115,7 +115,7 @@ test.test("Config Preflight は unknown key と modifier を検出する", funct
   config.reload.mods = { "hyper" }
   config.reload.key = "missing_key"
   config.commandKeys.bindings[1].commandKey = "left_magic"
-  config.controlLayer.arrows[1].arrow = "north"
+  config.controlLayer.bindings[1].to = "north"
 
   local ok, err = validate(config)
 
@@ -123,7 +123,7 @@ test.test("Config Preflight は unknown key と modifier を検出する", funct
   test.contains(err, "config.reload.mods[1] is unknown: hyper")
   test.contains(err, "config.reload.key is unknown: missing_key")
   test.contains(err, "config.commandKeys.bindings[1].commandKey is unknown: left_magic")
-  test.contains(err, "config.controlLayer.arrows[1].arrow is unknown: north")
+  test.contains(err, "config.controlLayer.bindings[1].to is unknown: north")
 end)
 
 test.test("Config Preflight は Input Remap mapping の shape を検証する", function()
@@ -240,11 +240,11 @@ test.test("Config Preflight は compact な App Switcher の Hotkey Identity 重
   )
 end)
 
-test.test("Config Preflight は compact な Control arrow を受け付け入力を mutate しない", function()
+test.test("Config Preflight は compact な Control Layer を受け付け入力を mutate しない", function()
   local config = validConfig()
-  config.controlLayer.arrows = {
-    { key = "i", arrow = "up" },
-    { key = "j", arrow = "left" },
+  config.controlLayer.bindings = {
+    { key = "i", to = "up" },
+    { key = "h", to = "delete" },
   }
   config.reload.description = nil
   config.appHotkeyBlocker.description = nil
@@ -253,11 +253,13 @@ test.test("Config Preflight は compact な Control arrow を受け付け入力�
   local ok, result = validate(config)
 
   test.equal(true, ok, result)
-  test.equal(nil, config.controlLayer.arrows[1].id)
-  test.equal(nil, config.controlLayer.arrows[1].description)
-  test.equal(nil, config.controlLayer.arrows[1].mods)
-  test.equal("i", config.controlLayer.arrows[1].key)
-  test.equal("up", config.controlLayer.arrows[1].arrow)
+  test.equal(nil, config.controlLayer.bindings[1].id)
+  test.equal(nil, config.controlLayer.bindings[1].description)
+  test.equal(nil, config.controlLayer.bindings[1].mods)
+  test.equal("i", config.controlLayer.bindings[1].key)
+  test.equal("up", config.controlLayer.bindings[1].to)
+  test.equal("h", config.controlLayer.bindings[2].key)
+  test.equal("delete", config.controlLayer.bindings[2].to)
   test.equal(nil, config.reload.description)
 end)
 
