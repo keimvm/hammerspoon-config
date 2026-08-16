@@ -253,6 +253,23 @@ test.test("Timer は1秒の countdown を 0:01 のまま完了し無期限 alert
   test.equal("indefinite", state.alertDetails[1].arguments[1])
   test.equal(false, state.alertDetails[1].closed)
   test.equal(true, state.eventtaps[1].started)
+  test.equal(1, #state.sounds)
+  test.equal("Tink", state.sounds[1].name)
+  test.equal(0.25, state.sounds[1].volumeValue)
+  test.equal(1, state.sounds[1].playCount)
+end)
+
+test.test("Timer は完了音を読み込めなくても alert を出す", function()
+  local _, state = setup()
+  state.soundUnavailable = true
+  startFromQuery(state, "1s")
+  state.now = state.now + 1
+  repeatingTimer(state).callback()
+
+  test.equal(1, #state.soundRequests)
+  test.equal("Tink", state.soundRequests[1])
+  test.equal(0, #state.playedSounds)
+  test.equal("1秒が経過しました", state.alerts[1])
 end)
 
 test.test("Timer の完了 alert は画面クリックまで表示し click を通す", function()
@@ -305,6 +322,7 @@ test.test("Timer は走行中の Enter で置き換え alert を出さない", f
   test.equal("1:00", activeMenubar(state).title)
   test.equal(true, state.menubars[1].deleted)
   test.equal(0, #state.alerts)
+  test.equal(0, #state.playedSounds)
 end)
 
 test.test("Timer はメニューのキャンセルで止め alert を出さない", function()
@@ -316,6 +334,7 @@ test.test("Timer はメニューのキャンセルで止め alert を出さな�
   test.equal(true, menubar.deleted)
   test.equal(nil, activeMenubar(state))
   test.equal(0, #state.alerts)
+  test.equal(0, #state.playedSounds)
 end)
 
 test.test("Timer は入力中の再トグルで閉じて走行を続ける", function()

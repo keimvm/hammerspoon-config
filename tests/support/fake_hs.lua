@@ -79,6 +79,9 @@ function M.new()
     notifications = {},
     notifyPresented = true,
     now = 1000,
+    playedSounds = {},
+    soundRequests = {},
+    sounds = {},
     tasks = {},
     timers = {},
     pasteboardText = "",
@@ -116,6 +119,7 @@ function M.new()
     osascript = {},
     pasteboard = {},
     spaces = {},
+    sound = {},
     task = {},
     timer = {},
     window = {},
@@ -379,6 +383,28 @@ function M.new()
       return state.notifyPresented
     end
     return notification
+  end
+
+  function hs.sound.getByName(name)
+    table.insert(state.soundRequests, name)
+    if state.soundUnavailable then return nil end
+
+    local sound = {
+      name = name,
+      playCount = 0,
+    }
+    function sound:volume(level)
+      if level == nil then return self.volumeValue end
+      self.volumeValue = level
+      return self
+    end
+    function sound:play()
+      self.playCount = self.playCount + 1
+      table.insert(state.playedSounds, self.name)
+      return self
+    end
+    table.insert(state.sounds, sound)
+    return sound
   end
 
   function hs.eventtap.keyStroke(mods, key, delay)

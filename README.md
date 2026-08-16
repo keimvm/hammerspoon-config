@@ -71,7 +71,7 @@ Hotkey の共通 field は `mods` と `key` です。`mods` は各 entry で `{ 
 - **Control Layer**: `{ mods = { "ctrl" }, key = "h", to = "delete" }` の形です。送り先が修飾付きのときは `to = { mods = { "cmd" }, key = "r" }` です。長押しで repeat させない場合は `repeatable = false` を付けます。`id` は省略時に `to` から導出します。後方削除は `delete`、前方削除は `forwarddelete` です。
 - **App Input Source**: `{ appName = "Zed", source = "eisu" }` の形です。`source` は `eisu`（英数）または `kana`（かな）です。止めるときは `enabled = false`。
 - **Unicode Converter**: `enabled` を `true` にすると登録します。変換例は `あ` ↔ `U+3042` です。`U+3042`、`0x3042`、`3042` を受け付けます。
-- **Timer**: `enabled = false` で登録しません。Hotkey を変えるときは `mods` と `key` を編集します。既定は分（1〜180）で、入力中の `Tab` で秒（1〜10800）と分を切り替えます。`s` で秒、`m` で分へ切り替える操作も利用できます。数字と `s` / `m` 以外は受け付けません。完了 alert は画面をクリックするまで消えません。
+- **Timer**: `enabled = false` で登録しません。Hotkey を変えるときは `mods` と `key` を編集します。既定は分（1〜180）で、入力中の `Tab` で秒（1〜10800）と分を切り替えます。`s` で秒、`m` で分へ切り替える操作も利用できます。数字と `s` / `m` 以外は受け付けません。完了時は短い `Tink` をシステム音量の25%で1回鳴らし、alert は画面をクリックするまで消えません。
 
 ## 変更を反映する
 

@@ -10,6 +10,8 @@ local CHOOSER_WIDTH = 36
 local CHOOSER_ROWS = 1
 local CHOOSER_FG = { red = 0.96, green = 0.97, blue = 0.98, alpha = 1 }
 local CHOOSER_SUBTEXT = { red = 0.66, green = 0.70, blue = 0.76, alpha = 1 }
+local COMPLETION_SOUND_NAME = "Tink"
+local COMPLETION_SOUND_VOLUME = 0.25
 
 local chooser = nil
 local chooserVisible = false
@@ -18,6 +20,7 @@ local unit = "minutes"
 local running = nil
 local activeAlertIds = {}
 local alertDismissTap = nil
+local completionSound = nil
 
 local function copyList(list)
   local copy = {}
@@ -144,6 +147,15 @@ local function announce(text)
   alertDismissTap:start()
 end
 
+local function playCompletionSound()
+  if not completionSound then
+    completionSound = hs.sound.getByName(COMPLETION_SOUND_NAME)
+    if completionSound then completionSound:volume(COMPLETION_SOUND_VOLUME) end
+  end
+
+  if completionSound then completionSound:play() end
+end
+
 local function stopRunning()
   if not running then return end
   if running.timer then running.timer:stop() end
@@ -156,6 +168,7 @@ local function complete()
   local text = elapsedText(running.amount, running.unit)
   stopRunning()
   announce(text)
+  playCompletionSound()
 end
 
 local function tick()
