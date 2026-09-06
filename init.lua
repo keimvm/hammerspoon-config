@@ -46,7 +46,7 @@ local config = configOverride or {
   appSwitchers = {
     { appName = "Typora", mods = { "ctrl" }, key = "m" },
     { appName = "Finder", mods = { "ctrl" }, key = "f" },
-    { appName = "メール", mods = { "ctrl" }, key = "o" },
+    { appName = "Microsoft Outlook", mods = { "ctrl" }, key = "o" },
     { appName = "cmux", mods = { "ctrl" }, key = "t" },
     { appName = "Zed", mods = { "ctrl" }, key = "r" },
     { appName = "Google Chrome", mods = { "ctrl" }, key = "g" },
