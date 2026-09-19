@@ -8,6 +8,34 @@ local function resetUnicodeModules()
   test.resetModule("modules.unicode_converter")
 end
 
+test.test("Unicode Converter は巨大な code point を整数 overflow で別の文字へ変換しない", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  resetUnicodeModules()
+  require("modules.unicode_converter").show()
+  local chooser = state.choosers[1]
+  for _, input in ipairs({ "U+10000000000003042", "0x10000000000003042", "10000000000003042", "U+D800", "U+110000" }) do
+    chooser.queryChangedFn(input)
+    local choice = chooser.currentChoices[1]
+    test.equal(true, choice.disabled, input .. " が変換されました")
+    test.contains(choice.text, "Invalid")
+  end
+  chooser.queryChangedFn("U+00000000000003042, 0x1F600")
+  test.equal("あ😀", chooser.currentChoices[1].text)
+end)
+
+test.test("Unicode Converter はコピー通知の UTF-8 を途中で切らない", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  resetUnicodeModules()
+  require("modules.unicode_converter").show()
+  local chooser = state.choosers[1]
+  chooser.queryChangedFn(string.rep("U+1F600 ", 90))
+  chooser.callback(chooser.currentChoices[1])
+  test.truthy(utf8.len(state.alerts[1]))
+  test.equal(string.rep("😀", 90), state.pasteboardText)
+end)
+
 test.test("Unicode Converter は enabled 設定で Hotkey 登録を切り替える", function()
   local hs, state = fakeHs.new()
   _G.hs = hs

@@ -7,8 +7,6 @@ local controlLayer = require("modules.control_layer")
 local hidRemap = require("modules.hid_remap")
 local hotkeyRegistry = require("modules.hotkey_registry").new()
 
-hs.window.animationDuration = 0
-
 local configOverride = ...
 
 local config = configOverride or {
@@ -67,6 +65,8 @@ local config = configOverride or {
 }
 
 configValidation.validate(config)
+
+hs.window.animationDuration = 0
 
 hidRemap.apply(config.hidRemap)
 controlLayer.bind(config.controlLayer, hotkeyRegistry)

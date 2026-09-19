@@ -22,6 +22,7 @@ end)
 
 test.test("init.lua は Config Preflight 失敗時に runtime side effect を開始しない", function()
   local hs, state = fakeHs.new()
+  hs.window.animationDuration = 0.2
   _G.hs = hs
 
   resetModules()
@@ -31,6 +32,7 @@ test.test("init.lua は Config Preflight 失敗時に runtime side effect を開
 
   test.equal(false, ok)
   test.contains(err, "invalid Hammerspoon config:")
+  test.equal(0.2, hs.window.animationDuration)
   test.equal(0, #state.hotkeys)
   test.equal(0, #state.applicationWatchers)
   test.equal(0, #state.eventtaps)

@@ -13,6 +13,46 @@ local function registerRunningApp(state, appName, options)
   return app
 end
 
+test.test("App Switcher は候補が1つなら Space の照会を省略する", function()
+  local hs, state = fakeHs.new()
+  local window = fakeHs.window(10)
+  registerRunningApp(state, "Finder", { windows = { window } })
+  hs.spaces.activeSpaces = function() error("unnecessary Space lookup") end
+  hs.spaces.windowSpaces = function() error("unnecessary window Space lookup") end
+  loadAppSwitcher(hs).toggleOrCycle("Finder")
+  test.equal(1, window.focusCount)
+  test.equal(0, #state.logs)
+end)
+
+test.test("App Switcher は window 一覧の順番を変更しない", function()
+  local hs, state = fakeHs.new()
+  local second = fakeHs.window(20, { standard = false })
+  local first = fakeHs.window(10, { standard = false })
+  local app = registerRunningApp(state, "Finder", { windows = { second, first } })
+  function app:mainWindow() return nil end
+  loadAppSwitcher(hs).toggleOrCycle("Finder")
+  test.equal(1, first.focusCount)
+  test.equal(second, app.windows[1])
+end)
+
+test.test("App Switcher は sort の比較ごとに window ID を取得し直さない", function()
+  local hs, state = fakeHs.new()
+  local windows = {}
+  local idReads = 0
+  for id = 64, 1, -1 do
+    local window = fakeHs.window(id)
+    function window:id()
+      idReads = idReads + 1
+      return id
+    end
+    table.insert(windows, window)
+  end
+  registerRunningApp(state, "Finder", { windows = windows })
+  loadAppSwitcher(hs).toggleOrCycle("Finder")
+  test.equal(1, windows[64].focusCount)
+  test.truthy(idReads <= 65, "window ID の取得回数: " .. idReads)
+end)
+
 test.test("App Switcher は未起動の app を launch する", function()
   local hs, state = fakeHs.new()
 
@@ -242,4 +282,3 @@ test.test("App Switcher は明示した mods を既定より優先する", funct
   test.equal(1, #state.hotkeys[1].mods)
   test.equal("cmd", state.hotkeys[1].mods[1])
 end)
-

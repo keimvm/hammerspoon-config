@@ -5,7 +5,7 @@ local DEFAULT_MODS = { "cmd" }
 
 local function copyList(list)
   local copy = {}
-  for index, value in ipairs(list) do
+  for index, value in pairs(list) do
     copy[index] = value
   end
   return copy

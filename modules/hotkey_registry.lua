@@ -87,10 +87,19 @@ local function validateDefinition(errors, entry)
 
   local identityValid = true
   local normalizedMods = {}
+  local seenMods = {}
   if type(hotkey.mods) ~= "table" then
     addDefinitionError(errors, path .. ".mods", "must be a table")
     identityValid = false
   else
+    local count = 0
+    local length = 0
+    for _ in ipairs(hotkey.mods) do length = length + 1 end
+    for _ in pairs(hotkey.mods) do count = count + 1 end
+    if count ~= length then
+      addDefinitionError(errors, path .. ".mods", "must be a list")
+      identityValid = false
+    end
     for index, mod in ipairs(hotkey.mods) do
       local itemPath = string.format("%s.mods[%d]", path, index)
       if type(mod) ~= "string" or mod == "" then
@@ -100,8 +109,15 @@ local function validateDefinition(errors, entry)
         if not M.isKnownModifier(mod) then
           addDefinitionError(errors, itemPath, "is unknown: " .. mod)
           identityValid = false
+        elseif normalizeMod(mod) == "fn" then
+          addDefinitionError(errors, itemPath, "is not supported by hs.hotkey: fn")
+          identityValid = false
         else
-          table.insert(normalizedMods, normalizeMod(mod))
+          local normalized = normalizeMod(mod)
+          if not seenMods[normalized] then
+            table.insert(normalizedMods, normalized)
+            seenMods[normalized] = true
+          end
         end
       end
     end
@@ -174,7 +190,7 @@ local function requireOptionalFunction(value, fieldName, hotkeyId, errorLevel)
   end
 end
 
-local function reserve(registry, hotkey, pressedFn, releasedFn, repeatFn)
+local function register(registry, create, hotkey, pressedFn, releasedFn, repeatFn)
   local id = type(hotkey) == "table" and hotkey.id or "<unknown>"
   local errors = {}
   local identity = validateDefinition(errors, {
@@ -203,21 +219,24 @@ local function reserve(registry, hotkey, pressedFn, releasedFn, repeatFn)
     )
   end
 
+  local ok, result = pcall(create, hotkey.mods, hotkey.key, pressedFn, releasedFn, repeatFn)
+  if not ok or not result then
+    error(string.format("failed to register hotkey %s (%s): %s", hotkey.id, identity, tostring(result)), 3)
+  end
+
   registry.hotkeys[identity] = {
     id = hotkey.id,
   }
 
-  return true
+  return result
 end
 
 function Registry:bind(hotkey, pressedFn, releasedFn, repeatFn)
-  if not reserve(self, hotkey, pressedFn, releasedFn, repeatFn) then return nil end
-  return hs.hotkey.bind(hotkey.mods, hotkey.key, pressedFn, releasedFn, repeatFn)
+  return register(self, hs.hotkey.bind, hotkey, pressedFn, releasedFn, repeatFn)
 end
 
 function Registry:create(hotkey, pressedFn, releasedFn, repeatFn)
-  if not reserve(self, hotkey, pressedFn, releasedFn, repeatFn) then return nil end
-  return hs.hotkey.new(hotkey.mods, hotkey.key, pressedFn, releasedFn, repeatFn)
+  return register(self, hs.hotkey.new, hotkey, pressedFn, releasedFn, repeatFn)
 end
 
 return M

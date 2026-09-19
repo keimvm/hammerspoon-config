@@ -1,6 +1,53 @@
 local test = require("tests.test_helper")
 local fakeHs = require("tests.support.fake_hs")
 
+test.test("Hotkey Registry は重複した modifier も同じ Hotkey Identity として扱う", function()
+  local hs = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hotkey_registry")
+  local registry = require("modules.hotkey_registry").new()
+  registry:bind({ id = "first", mods = { "ctrl", "control" }, key = "r" }, function() end)
+  local ok, err = pcall(function()
+    registry:bind({ id = "second", mods = { "ctrl" }, key = "r" }, function() end)
+  end)
+  test.equal(false, ok)
+  test.contains(err, "duplicate hotkey ctrl+r")
+end)
+
+test.test("Hotkey Registry は hs.hotkey が無視する fn modifier を拒否する", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hotkey_registry")
+  local registry = require("modules.hotkey_registry").new()
+  local ok, err = pcall(function()
+    registry:bind({ id = "fn-key", mods = { "fn" }, key = "r" }, function() end)
+  end)
+  test.equal(false, ok)
+  test.contains(err, "not supported by hs.hotkey: fn")
+  test.equal(0, #state.hotkeys)
+end)
+
+test.test("Hotkey Registry は登録失敗を報告し再試行を妨げない", function()
+  for _, method in ipairs({ "bind", "create" }) do
+    local hs = fakeHs.new()
+    _G.hs = hs
+    test.resetModule("modules.hotkey_registry")
+    local registry = require("modules.hotkey_registry").new()
+    local api = method == "bind" and "bind" or "new"
+    local original = hs.hotkey[api]
+    local definition = { id = "retry", mods = { "ctrl" }, key = "r" }
+    for _, failure in ipairs({ function() return nil end, function() error("OS failure") end }) do
+      hs.hotkey[api] = failure
+      local ok, err = pcall(registry[method], registry, definition, function() end)
+      test.equal(false, ok)
+      test.contains(err, "retry")
+      test.equal(nil, next(registry.hotkeys))
+    end
+    hs.hotkey[api] = original
+    test.truthy(registry[method](registry, definition, function() end))
+  end
+end)
+
 test.test("Hotkey Registry は description なしの Desired Hotkey を登録する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs

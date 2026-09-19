@@ -73,6 +73,68 @@ local function validConfig()
   }
 end
 
+test.test("Config Preflight は穴あき list と辞書形式を黙って省略しない", function()
+  local replacements = {
+    { "hidRemap", "mappings" },
+    { "commandKeys", "bindings" },
+    { "controlLayer", "bindings" },
+    { "appInputSources", "bindings" },
+    { "appSwitchers" },
+    { "appHotkeyBlockers" },
+  }
+  for _, path in ipairs(replacements) do
+    for _, malformed in ipairs({ { [2] = {} }, { entry = {} } }) do
+      local config = validConfig()
+      if path[2] then config[path[1]][path[2]] = malformed
+      else config[path[1]] = malformed end
+      local ok, err = validate(config)
+      test.equal(false, ok)
+      test.contains(err, "config." .. table.concat(path, ".") .. " must be a list")
+    end
+  end
+end)
+
+test.test("Config Preflight は feature の mods を正規化する前に list の不備を検出する", function()
+  local config = validConfig()
+  local hotkeys = {
+    config.controlLayer.bindings[1], config.appSwitchers[1],
+    config.appHotkeyBlockers[1], config.timer, config.unicodeConverter,
+  }
+  for _, hotkey in ipairs(hotkeys) do hotkey.mods = { [2] = "cmd" } end
+  config.controlLayer.bindings[1].to = { mods = { cmd = true }, key = "r" }
+
+  local ok, err = validate(config)
+  test.equal(false, ok)
+  for _, path in ipairs({
+    "controlLayer.bindings[1]", "appSwitchers[1]", "appHotkeyBlockers[1]",
+    "timer", "unicodeConverter", "controlLayer.bindings[1].to",
+  }) do
+    test.contains(err, "config." .. path .. ".mods must be a list")
+  end
+end)
+
+test.test("Config Preflight は Input Remap の同じ入力への重複指定を拒否する", function()
+  local config = validConfig()
+  config.hidRemap.mappings[2].from = "caps_lock"
+  config.commandKeys.bindings[2].commandKey = "cmd"
+  local ok, err = validate(config)
+  test.equal(false, ok)
+  test.contains(err, "config.hidRemap.mappings[2].from duplicates")
+  test.contains(err, "config.commandKeys.bindings[2].commandKey duplicates")
+end)
+
+test.test("Config Preflight は Command key の対象と出力 key code を検証する", function()
+  for _, value in ipairs({ -1, 1.5, math.huge, 0 / 0, 65536 }) do
+    local config = validConfig()
+    config.commandKeys.bindings[1].commandKey = "r"
+    config.commandKeys.bindings[1].outputKeyCode = value
+    local ok, err = validate(config)
+    test.equal(false, ok)
+    test.contains(err, "config.commandKeys.bindings[1].commandKey must be cmd or rightcmd")
+    test.contains(err, "config.commandKeys.bindings[1].outputKeyCode must be an integer between 0 and 65535")
+  end
+end)
+
 test.test("Config Preflight は複数の設定不備を field path 付きで集約する", function()
   local ok, err = validate({
     hidRemap = "invalid",

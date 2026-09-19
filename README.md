@@ -51,6 +51,10 @@ Hotkey の共通 field は `mods` と `key` です。`mods` は各 entry で `{ 
 
 同じ `mods + key` を複数の有効な設定に使うと、Config Preflight が `duplicates Hotkey Identity` error を出して reload を中止します。新しい entry を足すのではなく置き換える場合は、元の entry を編集します。
 
+Hotkey の修飾キーには `ctrl`、`alt`、`shift`、`cmd` を指定します。`control`、`option`、`command` も使えます。同じ修飾キーを重ねても同じ組み合わせとして重複を検出します。`fn` は [hs.hotkey の対応する修飾キー](https://www.hammerspoon.org/docs/hs.hotkey.html#new)に含まれないため、Hotkey の設定では error にします。Control Layer の送り先では引き続き使用できます。
+
+`bindings`、`mappings`、app の list、`mods` は、途中の番号を飛ばさず `{ ... }` で並べます。辞書形式や穴あき list は Config Preflight が拒否します。Input Remap で同じ入力キーを二重に指定することもできません。`commandKeys.bindings` の対象は `cmd` / `rightcmd`、`outputKeyCode` は 0〜65535 の整数です。
+
 ### App Switcher
 
 各 entry は対象 app の `appName`、`mods`、`key` です。`appName` は実際の app bundle 名に合わせます。

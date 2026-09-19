@@ -59,14 +59,20 @@ function M.bind(config)
 
     if isIgnored(e, config.ignoredEventSourceUserData) then return false end
 
+    if eventType ~= types.flagsChanged then
+      markDownStatesUsed(states)
+      return false
+    end
+
     local keyCode = e:getKeyCode()
     local state = states[keyCode]
 
-    if eventType == types.flagsChanged and state then
+    if state then
       if not state.down then
-        if not e:getFlags().cmd then return false end
+        local flags = e:getFlags()
+        if not flags.cmd then return false end
 
-        local isChord = hasDownState(states)
+        local isChord = flags.ctrl or flags.alt or flags.shift or flags.fn or hasDownState(states)
         markDownStatesUsed(states)
         state.down = true
         state.used = isChord
@@ -81,15 +87,7 @@ function M.bind(config)
       return false
     end
 
-    if eventType == types.flagsChanged then
-      markDownStatesUsed(states)
-      return false
-    end
-
-    if eventType ~= types.flagsChanged then
-      markDownStatesUsed(states)
-    end
-
+    markDownStatesUsed(states)
     return false
   end)
 

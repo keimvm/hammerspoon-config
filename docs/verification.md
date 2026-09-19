@@ -16,6 +16,15 @@ repo root で次を実行する。
 - `init.lua` と `modules/*.lua` が Git で追跡されていること
 - fake `hs` adapter を使った behavior contract
 
+効率性・安定性の回帰として、次も検証する。
+
+- 辞書形式や穴あきの設定 list、Input Remap の重複、不正な出力 key code を Config Preflight で拒否する。
+- Config Preflight が失敗したら、window animation の設定も変更しない。
+- 修飾キーの重複表記で Hotkey Identity の検証をすり抜けない。Hotkey の `fn` は拒否し、登録に失敗した場合は対象の `id` を含む error を出す。
+- Ctrl / Alt / Shift / Fn を先に押してから Command を押しても、Command 単体押しの入力切替が発火しない。mouse event では key code を取得しない。
+- App Switcher の候補が1つなら Space 照会を行わない。複数候補の sort は ID を一度ずつ取得して比較し、app が返した window 一覧を変更しない。
+- 長い Unicode code point が整数 overflow で別の文字に化けない。コピー通知を省略しても UTF-8 の文字の途中で切らない。
+
 Hammerspoon IPC には接続しない。`hs -c` が利用できない環境でも成功することを前提とする。
 
 ## Manual Runtime Verification
@@ -43,6 +52,7 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 - [ ] 物理 `left_control` を Command key として使える。
 - [ ] 左 Command key の単体押しで `英数`、右 Command key の単体押しで `かな` に切り替わる。
 - [ ] Command key を shortcut chord として使った場合、単体押しの入力切替が発火しない。
+- [ ] Ctrl / Alt / Shift / Fn のいずれかを先に押し、Command を押して離しても入力切替が発火しない。その後、Command 単体押しでは通常どおり切り替わる。
 - [ ] 左右 Command key を同時に押して離しても入力切替が発火せず、その後の左右それぞれの単体押しが動作する。
 - [ ] Command key を押したまま Hammerspoon を reload し、全 Command key を離すまでは入力切替が発火せず、その後の左右それぞれの単体押しが動作する。
 
@@ -74,6 +84,8 @@ Automated Verification が成功してから実施する。Hammerspoon menu の 
 3. `cmd+shift+u` で chooser が開くことを確認する。
 4. `U+3042` → `あ` と `あ` → `U+3042` を確認する。
 5. 検証後は `enabled = false` に戻して reload する。
+
+境界値の確認では、`U+10000000000003042` が「あ」へ変換されず error になること、`U+00000000000003042` は「あ」になることを確認する。絵文字を多数含む変換結果をコピーし、通知の末尾に文字化けがないことも確認する。
 
 ### Timer
 

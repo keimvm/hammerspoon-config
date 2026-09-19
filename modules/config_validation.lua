@@ -105,13 +105,9 @@ local function validateKeyStroke(errors, path, value)
     return
   end
 
-  if value.mods ~= nil then
-    if type(value.mods) ~= "table" then
-      addError(errors, path .. ".mods", "must be a table")
-    else
-      for index, mod in ipairs(value.mods) do
-        validateKnownModifier(errors, path .. ".mods[" .. index .. "]", mod)
-      end
+  if value.mods ~= nil and requireList(errors, path .. ".mods", value.mods) then
+    for index, mod in ipairs(value.mods) do
+      validateKnownModifier(errors, path .. ".mods[" .. index .. "]", mod)
     end
   end
 
@@ -135,12 +131,20 @@ end
 local function validateFeatureShapes(errors, config, valid, hotkeys)
   if valid.hidRemap then
     validateEnabled(errors, "config.hidRemap", config.hidRemap.enabled)
-    if requireTable(errors, "config.hidRemap.mappings", config.hidRemap.mappings) then
+    if requireList(errors, "config.hidRemap.mappings", config.hidRemap.mappings) then
+      local sources = {}
       for index, mapping in ipairs(config.hidRemap.mappings) do
         local path = string.format("config.hidRemap.mappings[%d]", index)
         if requireTable(errors, path, mapping) then
           validateKnownHidKey(errors, path .. ".from", mapping.from)
           validateKnownHidKey(errors, path .. ".to", mapping.to)
+          if type(mapping.from) == "string" then
+            if sources[mapping.from] then
+              addError(errors, path .. ".from", "duplicates " .. sources[mapping.from] .. ".from")
+            else
+              sources[mapping.from] = path
+            end
+          end
         end
       end
     end
@@ -148,15 +152,25 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
 
   if valid.commandKeys then
     validateEnabled(errors, "config.commandKeys", config.commandKeys.enabled)
-    if requireTable(errors, "config.commandKeys.bindings", config.commandKeys.bindings) then
+    if requireList(errors, "config.commandKeys.bindings", config.commandKeys.bindings) then
+      local sources = {}
       for index, binding in ipairs(config.commandKeys.bindings) do
         local path = string.format("config.commandKeys.bindings[%d]", index)
         if requireTable(errors, path, binding) then
           if requireNonEmptyString(errors, path .. ".commandKey", binding.commandKey) then
             validateKnownKey(errors, path .. ".commandKey", binding.commandKey)
+            if binding.commandKey ~= "cmd" and binding.commandKey ~= "rightcmd" then
+              addError(errors, path .. ".commandKey", "must be cmd or rightcmd")
+            elseif sources[binding.commandKey] then
+              addError(errors, path .. ".commandKey", "duplicates " .. sources[binding.commandKey] .. ".commandKey")
+            else
+              sources[binding.commandKey] = path
+            end
           end
           if type(binding.outputKeyCode) ~= "number" then
             addError(errors, path .. ".outputKeyCode", "must be a number")
+          elseif binding.outputKeyCode % 1 ~= 0 or binding.outputKeyCode < 0 or binding.outputKeyCode > 65535 then
+            addError(errors, path .. ".outputKeyCode", "must be an integer between 0 and 65535")
           end
         end
       end
@@ -164,7 +178,7 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
   end
 
   if valid.controlLayer then
-    if requireTable(errors, "config.controlLayer.bindings", config.controlLayer.bindings) then
+    if requireList(errors, "config.controlLayer.bindings", config.controlLayer.bindings) then
       for index, binding in ipairs(config.controlLayer.bindings) do
         local path = string.format("config.controlLayer.bindings[%d]", index)
         collectHotkey(path, controlLayer.desiredHotkey(binding), hotkeys)
@@ -195,9 +209,7 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
   end
 
   if valid.appHotkeyBlockers then
-    if config.appHotkeyBlockers.appName ~= nil then
-      addError(errors, "config.appHotkeyBlockers", "must be a list")
-    else
+    if requireList(errors, "config.appHotkeyBlockers", config.appHotkeyBlockers) then
       for index, binding in ipairs(config.appHotkeyBlockers) do
         local path = string.format("config.appHotkeyBlockers[%d]", index)
         collectHotkey(path, appHotkeyBlocker.desiredHotkey(binding), hotkeys)
@@ -208,7 +220,7 @@ local function validateFeatureShapes(errors, config, valid, hotkeys)
     end
   end
 
-  if valid.appSwitchers then
+  if valid.appSwitchers and requireList(errors, "config.appSwitchers", config.appSwitchers) then
     for index, binding in ipairs(config.appSwitchers) do
       local path = string.format("config.appSwitchers[%d]", index)
       collectHotkey(path, appSwitcher.desiredHotkey(binding), hotkeys)

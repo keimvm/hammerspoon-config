@@ -1,6 +1,42 @@
 local test = require("tests.test_helper")
 local fakeHs = require("tests.support.fake_hs")
 
+test.test("Command key は先に押された修飾キーとの chord を単体押しにしない", function()
+  for _, modifier in ipairs({ "ctrl", "alt", "shift", "fn" }) do
+    local hs, state = fakeHs.new()
+    _G.hs = hs
+    test.resetModule("modules.command_keys")
+    require("modules.command_keys").bind({ bindings = {
+      { commandKey = "cmd", outputKeyCode = 0x66 },
+    } })
+    local tap = state.eventtaps[1]
+    local types = hs.eventtap.event.types
+    tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true, [modifier] = true }))
+    tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { [modifier] = true }))
+    test.equal(0, #state.keyStrokes, modifier .. " + Command で入力切替が発火しました")
+    tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+    tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, {}))
+    test.equal(1, #state.keyStrokes)
+  end
+end)
+
+test.test("Command key は mouse event から key code を取得しない", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.command_keys")
+  require("modules.command_keys").bind({ bindings = {
+    { commandKey = "cmd", outputKeyCode = 0x66 },
+  } })
+  local tap = state.eventtaps[1]
+  local types = hs.eventtap.event.types
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+  local mouse = fakeHs.event(types.leftMouseDown)
+  function mouse:getKeyCode() error("mouse event has no key code") end
+  tap.callback(mouse)
+  tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, {}))
+  test.equal(0, #state.keyStrokes)
+end)
+
 test.test("HID mapping は現在の modifier remap を hidutil に適用する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs

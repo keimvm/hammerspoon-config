@@ -6,7 +6,7 @@ local DEFAULT_MODS = { "ctrl" }
 
 local function copyList(list)
   local copy = {}
-  for index, value in ipairs(list) do
+  for index, value in pairs(list) do
     copy[index] = value
   end
   return copy
@@ -78,11 +78,7 @@ local function getCandidateWindows(app)
     if mw then wins = { mw } end
   end
 
-  if #wins == 0 then wins = all end
-
-  table.sort(wins, function(a, b)
-    return (a:id() or 0) < (b:id() or 0)
-  end)
+  if #wins == 0 then wins = copyList(all) end
 
   return wins
 end
@@ -124,10 +120,15 @@ end
 
 local function getPreferredCandidateWindows(app)
   local wins = getCandidateWindows(app)
-  if #wins == 0 then return wins end
+  if #wins <= 1 then return wins end
 
   local current = getCurrentSpaceCandidates(wins)
-  if current and #current > 0 then return current end
+  if current and #current > 0 then wins = current end
+
+  -- OS を跨ぐ ID 取得は候補ごとに1回とし、比較関数では Lua の値だけを扱う。
+  local ids = {}
+  for _, win in ipairs(wins) do ids[win] = win:id() or 0 end
+  table.sort(wins, function(a, b) return ids[a] < ids[b] end)
 
   return wins
 end

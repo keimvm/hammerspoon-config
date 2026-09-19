@@ -15,7 +15,7 @@ local chooserVisible = false
 
 local function copyList(list)
   local copy = {}
-  for index, value in ipairs(list) do
+  for index, value in pairs(list) do
     copy[index] = value
   end
   return copy
@@ -52,47 +52,36 @@ end
 
 local function parseCodeToken(token)
   local hex = token:match("^[Uu]%+([0-9A-Fa-f]+)$")
-  if hex then return tonumber(hex, 16), "explicit" end
-
-  hex = token:match("^0[xX]([0-9A-Fa-f]+)$")
-  if hex then return tonumber(hex, 16), "explicit" end
-
-  if token:match("^[0-9A-Fa-f]+$") and token:match("%d") then
-    return tonumber(token, 16), "bare"
+    or token:match("^0[xX]([0-9A-Fa-f]+)$")
+  if not hex and token:match("^[0-9A-Fa-f]+$") and token:match("%d") then
+    hex = token
   end
+  if not hex then return nil, false end
 
-  return nil, nil
-end
-
-local function splitCodeTokens(input)
-  local tokens = {}
-  for token in input:gmatch("[^,%s]+") do
-    table.insert(tokens, token)
-  end
-  return tokens
+  -- Lua の整数 overflow で不正な値が別の code point に化けるのを防ぐ。
+  hex = hex:gsub("^0+", "")
+  if #hex > 6 then return nil, true end
+  return tonumber(hex == "" and "0" or hex, 16), true
 end
 
 local function looksLikeCodePointInput(input)
-  local tokens = splitCodeTokens(input)
-  if #tokens == 0 then return false, tokens end
-
-  for _, token in ipairs(tokens) do
-    if not parseCodeToken(token) then
-      return false, tokens
-    end
+  local tokens = {}
+  for token in input:gmatch("[^,%s]+") do
+    local cp, isCodeToken = parseCodeToken(token)
+    if not isCodeToken then return false end
+    table.insert(tokens, { text = token, codePoint = cp })
   end
 
-  return true, tokens
+  return #tokens > 0, tokens
 end
 
-local function codePointsToString(input)
-  local _, tokens = looksLikeCodePointInput(input)
+local function codePointsToString(tokens)
   local chars = {}
 
   for _, token in ipairs(tokens) do
-    local cp = parseCodeToken(token)
+    local cp = token.codePoint
     if not cp then
-      return nil, "Invalid code point: " .. token
+      return nil, "Invalid code point: " .. token.text
     end
 
     if cp >= 0xD800 and cp <= 0xDFFF then
@@ -126,8 +115,8 @@ end
 
 local function displayText(text)
   text = text:gsub("\n", "\\n")
-  if #text <= 80 then return text end
-  return text:sub(1, 77) .. "..."
+  if utf8.len(text) <= 80 then return text end
+  return text:sub(1, utf8.offset(text, 78) - 1) .. "..."
 end
 
 local function disabledChoice(text, subText)
@@ -149,8 +138,9 @@ local function buildChoices(query)
   end
 
   local output, detail
-  if looksLikeCodePointInput(input) then
-    output, detail = codePointsToString(input)
+  local isCodePointInput, tokens = looksLikeCodePointInput(input)
+  if isCodePointInput then
+    output, detail = codePointsToString(tokens)
     if not output then
       return {
         disabledChoice(detail, "No result"),
