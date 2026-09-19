@@ -37,7 +37,7 @@ _Avoid_: IME switcher, input method watcher
 _Avoid_: layout, input method, keyboard layout
 
 **App Switcher**:
-Desired Hotkey に対応する macOS app を起動、focus、hide、または window cycle する feature。window cycle は各 display で現在表示中の Space を優先し、対象 window がない場合だけ全 Space を対象にする。対象 app と Hotkey の選択は `init.lua` の設定が表す。
+Desired Hotkey に対応する macOS app を起動、focus、hide、または window cycle する feature。window cycle は各 display で現在表示中の Space を優先し、対象 window がないと確認できた場合だけ全 Space を対象にする。Space の取得失敗は window がない場合と区別する。対象 app と Hotkey の選択は `init.lua` の設定が表す。
 _Avoid_: App launcher
 
 **Input Remap**:

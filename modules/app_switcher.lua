@@ -64,28 +64,34 @@ local function findRunningApp(hint)
 end
 
 local function getCandidateWindows(app)
-  local all = app:allWindows() or {}
-  local standard = {}
-
-  for _, w in ipairs(all) do
-    if w:isStandard() then table.insert(standard, w) end
+  local wins, ids, seen = {}, {}, {}
+  local function addWindow(win)
+    if not win then return end
+    local id = win:id()
+    if not id or id <= 0 or seen[id] then return end
+    -- 標準フィルターと同じ種類だけを扱い、補助パネルや Finder のデスクトップを除く。
+    if hs.window.filter.allowedWindowRoles[win:subrole()] then
+      table.insert(wins, win)
+      ids[win], seen[id] = id, true
+    end
   end
 
-  local wins = (#standard > 0) and standard or {}
-
+  for _, win in ipairs(app:allWindows() or {}) do
+    addWindow(win)
+  end
+  -- 別 Space のウィンドウが一覧から取れないアプリでも、新規表示を要求する前に確認する。
   if #wins == 0 then
-    local mw = app:mainWindow()
-    if mw then wins = { mw } end
+    addWindow(app:mainWindow())
+    addWindow(app:focusedWindow())
   end
-
-  if #wins == 0 then wins = copyList(all) end
-
-  return wins
+  return wins, ids
 end
 
-local function getCurrentSpaceCandidates(wins)
+local function getPreferredCandidateWindows(wins, ids)
+  if #wins == 0 then return wins, false end
+
   local ok, activeSpaces, err = pcall(hs.spaces.activeSpaces)
-  if not ok or not activeSpaces then
+  if not ok or not activeSpaces or next(activeSpaces) == nil then
     log.wf("active space lookup failed: %s", err or activeSpaces or "unknown error")
     return nil
   end
@@ -95,42 +101,40 @@ local function getCurrentSpaceCandidates(wins)
     activeSpaceIds[spaceId] = true
   end
 
-  local current = {}
+  local current, other = {}, {}
+  local lookupFailed = false
   for _, win in ipairs(wins) do
     local spacesOk, windowSpaces, spacesErr = pcall(hs.spaces.windowSpaces, win)
     if not spacesOk or not windowSpaces then
       log.wf(
         "window space lookup failed for %s: %s",
-        tostring(win:id()),
+        tostring(ids[win]),
         spacesErr or windowSpaces or "unknown error"
       )
-      return nil
-    end
-
-    for _, spaceId in ipairs(windowSpaces) do
-      if activeSpaceIds[spaceId] then
-        table.insert(current, win)
-        break
+      lookupFailed = true
+    elseif #windowSpaces > 0 then
+      local isCurrent = false
+      for _, spaceId in ipairs(windowSpaces) do
+        if activeSpaceIds[spaceId] then
+          isCurrent = true
+          break
+        end
       end
+      table.insert(isCurrent and current or other, win)
     end
   end
 
-  return current
-end
-
-local function getPreferredCandidateWindows(app)
-  local wins = getCandidateWindows(app)
-  if #wins <= 1 then return wins end
-
-  local current = getCurrentSpaceCandidates(wins)
-  if current and #current > 0 then wins = current end
+  -- 空の所属一覧は非表示タブなどにも現れるため候補から外す。API の失敗とは区別する。
+  -- 現在の Space にあると確認できた候補は使えるが、取得失敗時は別 Space へ移動しない。
+  if #current == 0 and lookupFailed then return nil end
+  local isCurrent = #current > 0
+  wins = isCurrent and current or other
+  if #wins == 0 then return nil end
 
   -- OS を跨ぐ ID 取得は候補ごとに1回とし、比較関数では Lua の値だけを扱う。
-  local ids = {}
-  for _, win in ipairs(wins) do ids[win] = win:id() or 0 end
   table.sort(wins, function(a, b) return ids[a] < ids[b] end)
 
-  return wins
+  return wins, isCurrent
 end
 
 local function nextIndexByLastId(wins, lastWinId)
@@ -149,13 +153,13 @@ end
 local function focusWindow(app, win)
   if not (app and win) then return false end
 
-  app:unhide()
-  app:activate(true)
-
   if win:isMinimized() then
     win:unminimize()
   end
 
+  -- 再表示より先に対象を main にする。focus() 自体がアプリの前面化と Finder 対策を行う。
+  win:becomeMain()
+  app:unhide()
   win:focus()
   win:raise()
   return true
@@ -183,7 +187,8 @@ local function focusNextWindowAfterReopen(appName)
     local key = stateKey(app, appName)
     appState[key] = appState[key] or { lastWinId = nil }
 
-    local wins = getPreferredCandidateWindows(app)
+    local wins = getPreferredCandidateWindows(getCandidateWindows(app))
+    if not wins then return end
     local idx = nextIndexByLastId(wins, appState[key].lastWinId)
     if not idx then return end
 
@@ -203,19 +208,31 @@ function M.toggleOrCycle(appName)
   local key = stateKey(app, appName)
   appState[key] = appState[key] or { lastWinId = nil }
 
-  if app:isFrontmost() then
-    local fw = app:focusedWindow() or app:mainWindow()
-    if fw then appState[key].lastWinId = fw:id() end
-    app:hide()
-    return
-  end
-
-  local wins = getPreferredCandidateWindows(app)
-
+  local wins, ids = getCandidateWindows(app)
   if #wins == 0 then
     reopenApp(app)
     focusNextWindowAfterReopen(appName)
     return
+  end
+
+  local isCurrent
+  wins, isCurrent = getPreferredCandidateWindows(wins, ids)
+  if not wins then
+    hs.alert.show("デスクトップを確認できませんでした。もう一度押してください。", 2)
+    return
+  end
+
+  -- Finder のデスクトップが最前面なだけなら、非表示にせず別 Space のウィンドウを開く。
+  if app:isFrontmost() and isCurrent then
+    local fw = app:focusedWindow()
+    local focusedId = fw and fw:id()
+    for _, win in ipairs(wins) do
+      if ids[win] == focusedId and not win:isMinimized() then
+        appState[key].lastWinId = focusedId
+        app:hide()
+        return
+      end
+    end
   end
 
   local idx = nextIndexByLastId(wins, appState[key].lastWinId)

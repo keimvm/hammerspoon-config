@@ -20,7 +20,7 @@ git diff --check
 | 初期化・Config Preflight | 型、キー、リスト形式、重複、出力キーコードの検証。失敗時はウィンドウアニメーションの設定も変更しない | [init_test.lua](../tests/init_test.lua)、[config_validation_test.lua](../tests/config_validation_test.lua) |
 | Hotkey Registry | 修飾キーの別名や重複表記の正規化、`fn` の拒否、登録失敗時の `id` を含むエラー | [hotkey_registry_test.lua](../tests/hotkey_registry_test.lua) |
 | Input Remap・Control Layer | HID 変換の解除、Command 単体押しと組み合わせ操作、マウスイベントでキーコードを取得しないこと、繰り返し入力 | [input_remap_test.lua](../tests/input_remap_test.lua) |
-| App Switcher | 起動、非表示、Space の優先、ウィンドウの巡回・再表示。候補が1つなら Space を照会せず、並べ替えで元の一覧を変更しない | [app_switcher_test.lua](../tests/app_switcher_test.lua) |
+| App Switcher | 起動、非表示、Space の優先、巡回・再表示、Finder の非 standard window とデスクトップの区別、補助要素の除外、Space 取得失敗時の誤移動防止。候補が1つでも所属 Space を確認し、並べ替えで元の一覧を変更しない | [app_switcher_test.lua](../tests/app_switcher_test.lua) |
 | アプリごとの制御 | 最前面アプリに応じた Hotkey の有効化と入力ソースの切り替え | [app_hotkey_blocker_test.lua](../tests/app_hotkey_blocker_test.lua)、[app_input_source_test.lua](../tests/app_input_source_test.lua) |
 | Unicode Converter | 長いコードポイントの整数オーバーフロー防止、通知を省略するときの UTF-8 境界 | [unicode_converter_test.lua](../tests/unicode_converter_test.lua) |
 | Timer | 入力、単位切り替え、カウントダウン、キャンセル、完了表示・音 | [timer_test.lua](../tests/timer_test.lua) |
@@ -62,13 +62,26 @@ git diff --check
 ### App Switcher
 
 - [ ] 対象アプリが未起動なら、その Hotkey で起動する。
-- [ ] 最前面で同じ Hotkey を押すと、別の Space のウィンドウも含めてアプリ全体を非表示にする。
+- [ ] Finder のウィンドウをすべて閉じ、Finder が最前面の状態でも Hotkey で新しいウィンドウが開く。
+- [ ] 現在の Space の対象ウィンドウが最前面で同じ Hotkey を押すと、別の Space のウィンドウも含めてアプリ全体を非表示にする。
 - [ ] Space 1 と Space 2 に対象ウィンドウを用意し、アプリが最前面でない状態から各 Space で Hotkey を押すと、同じ Space のウィンドウにフォーカスする。
+- [ ] Finder で直前に別の Space のウィンドウを使っていても、今の Space のウィンドウが選ばれ、別 Space への一時的な移動も起きない。両方の Space から数回ずつ確認する。
 - [ ] 現在の Space に複数の対象ウィンドウがある場合、アプリが最前面でない状態から呼び出すたびに、その Space 内で対象が順に切り替わる。
 - [ ] アプリを非表示にして別の Space へ移動した後、Hotkey で移動先の対象ウィンドウを表示する。
 - [ ] 現在の Space の対象ウィンドウが最小化されている場合、別の Space のウィンドウより優先して復帰する。
 - [ ] 現在の Space に対象ウィンドウがない場合は、別の Space のウィンドウへ移動する。
+- [ ] Finder のデスクトップだけが最前面で、対象ウィンドウは別 Space にだけある場合も、1回の Hotkey でそちらへ移動する。
+- [ ] cmux などで補助要素がウィンドウ一覧に含まれていても、別 Space の実際のウィンドウへ移動する。
 - [ ] 複数のディスプレイでは、各ディスプレイで現在表示中の Space にあるウィンドウを優先する。
+
+Finder の通常のフォルダが `isStandard() == false`、`subrole() == "AXDialog"` として取得される環境も対象です。ID が0の要素と所属 Space が空の要素は候補から除外し、取得エラーとは区別することを自動テストで確認します。
+
+#### 2026-09-19 の確認結果
+
+- 自動検証：`./scripts/check` の117件と `git diff --check` が成功。別 Space への移動に関する追加テストは、今回の追加修正前の実装では5件失敗し、修正後は成功。
+- 実機確認：設定を再読み込みし、Console から Hotkey と同じ `toggleOrCycle` を呼び出した。Finder の現在 Space での再表示・最小化からの復帰に加え、cmux が別 Space にだけある状態で移動とフォーカスを確認。
+- Finder の別 Space への移動：Console を一時的に全画面表示し、Finder のウィンドウがない Space から呼び出した。通常表示と非表示の両方で既存ウィンドウのある Space へ移動し、対象ウィンドウにフォーカスすることを確認。2回の呼び出しで異なる既存 Space へ移動した。検証後に全画面表示を解除し、Finder のウィンドウ配置と Space 一覧が元の状態であることを確認。
+- 未確認：物理 Hotkey での一連の操作、デスクトップだけが最前面の Finder からの移動、全ウィンドウを閉じた状態からの新規表示。これらの条件は自動テストで確認している。
 
 ### App Input Source
 

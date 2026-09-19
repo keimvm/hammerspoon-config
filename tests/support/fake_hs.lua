@@ -12,9 +12,28 @@ function M.window(id, options)
 
   function window:id() return id end
   function window:isStandard() return self.standard end
+  function window:role() return options.role or "AXWindow" end
+  function window:subrole()
+    if options.subrole then return options.subrole end
+    if self:role() ~= "AXWindow" then return "" end
+    return self.standard and "AXStandardWindow" or "AXDialog"
+  end
   function window:isMinimized() return self.minimized end
   function window:unminimize() self.minimized = false end
-  function window:focus() self.focusCount = self.focusCount + 1 end
+  function window:becomeMain()
+    if self.owner then self.owner.main = self end
+    return self
+  end
+  function window:focus()
+    self.focusCount = self.focusCount + 1
+    self:becomeMain()
+    if self.owner then
+      self.owner.activated = true
+      self.owner.frontmost = true
+      self.owner.focused = self
+    end
+    return self
+  end
   function window:raise() self.raiseCount = self.raiseCount + 1 end
 
   return window
@@ -26,15 +45,16 @@ function M.app(name, options)
     activated = false,
     frontmost = options.frontmost == true,
     hidden = false,
+    focused = options.focusedWindow,
     windows = options.windows or {},
   }
-  local focusedWindow = options.focusedWindow
+  for _, window in ipairs(app.windows) do window.owner = app end
 
   function app:name() return name end
   function app:bundleID() return options.bundleID or ("test." .. string.lower(name)) end
   function app:allWindows() return self.windows end
-  function app:mainWindow() return self.windows[1] end
-  function app:focusedWindow() return focusedWindow end
+  function app:mainWindow() return self.main or self.windows[1] end
+  function app:focusedWindow() return self.focused end
   function app:isFrontmost() return self.frontmost end
   function app:hide()
     self.hidden = true
@@ -122,7 +142,9 @@ function M.new()
     sound = {},
     task = {},
     timer = {},
-    window = {},
+    window = {
+      filter = { allowedWindowRoles = { AXStandardWindow = true, AXDialog = true, AXSystemDialog = true } },
+    },
   }
   hs.application.watcher = {
     activated = "activated",
