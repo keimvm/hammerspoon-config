@@ -50,7 +50,7 @@ local config = configOverride or {
     { appName = "cmux", mods = { "ctrl" }, key = "t" },
     { appName = "Zed", mods = { "ctrl" }, key = "r" },
     { appName = "Google Chrome", mods = { "ctrl" }, key = "g" },
-    { appName = "Notion", mods = { "ctrl" }, key = "n" },
+    -- { appName = "Notion", mods = { "ctrl" }, key = "n" },
   },
   -- 対象 app が frontmost になったら入力ソースを切り替える。
   appInputSources = {
