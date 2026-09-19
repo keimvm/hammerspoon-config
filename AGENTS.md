@@ -9,16 +9,20 @@
 - Assume macOS by default unless stated otherwise or the repository clearly indicates another environment.
 - Prefer Homebrew, pnpm, and uv when choosing tools or package managers, unless the repository indicates otherwise.
 
-## Agent skills
+## 作業の入口
 
-### Issue tracker
+- 利用手順と文書一覧は [README.md](README.md)、用語と設計判断の読み方は [docs/agents/domain.md](docs/agents/domain.md) を参照してください。
+- 設定値は `init.lua` の `config`、機能の実装は `modules/`、自動テストは `tests/` にあります。
+- 設定の変更方法は [docs/configuration.md](docs/configuration.md) にまとめています。現在の割り当てと有効・無効は `init.lua` を確認してください。
 
-この repo の issue と PRD は GitHub Issues で管理します。外部 PR は triage 対象にしません。詳細は `docs/agents/issue-tracker.md` を参照してください。
+## 変更と検証
 
-### Triage labels
+- 設定と実装の役割を保ち、変更対象の既存コードとテストを確認してから作業してください。
+- 変更後はリポジトリのルートで `./scripts/check` と `git diff --check` を実行してください。
+- 動作を変えた場合は [docs/verification.md](docs/verification.md) の該当項目を実機で確認し、自動検証と実機確認の結果を分けて報告してください。実機確認ができなければ、その範囲を明記してください。
+- 利用方法や設定を変えた場合は対応する文書も更新してください。過去の改善記録は [docs/strategy/codebase-improvement.md](docs/strategy/codebase-improvement.md) にあります。
 
-triage label は canonical role と同じ文字列を使います。詳細は `docs/agents/triage-labels.md` を参照してください。
+## Issue 管理
 
-### Domain docs
-
-この repo は single-context layout です。詳細は `docs/agents/domain.md` を参照してください。
+- Issue と PRD は GitHub Issues で管理します。操作方法と triage の対象範囲は [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md) を参照してください。
+- triage のラベルは [docs/agents/triage-labels.md](docs/agents/triage-labels.md) に定義しています。

@@ -1,95 +1,67 @@
 # Hammerspoon Config
 
-macOS 用の Hammerspoon 設定です。利用者が変える値は `init.lua` の `config`、動作の実装は `modules/` にあります。いま有効な割り当ては `init.lua` を見てください。この文書は始め方と、設定の直し方だけを持ちます。
+macOS 用の Hammerspoon 設定です。キー入力の変換、アプリの切り替え、入力ソースの切り替え、タイマーなどを提供します。設定値は [init.lua](init.lua) の `config`、機能の実装は `modules/` にあります。
 
 > [!IMPORTANT]
-> 初期設定は、読み込み時に物理 `caps_lock` を `left_control`、物理 `left_control` を `left_command` へ remap します。初回の **Reload Config** の前に、`config.hidRemap` が自分の keyboard に合うことを確認してください。
+> 初期設定では、設定の読み込み時に物理 `caps_lock` を `left_control`、物理 `left_control` を `left_command` に変換します。Hammerspoon を起動する前に、`config.hidRemap` が自分のキーボードに合うことを確認してください。
 
 ## はじめる
 
-1. [Hammerspoon](https://www.hammerspoon.org/go/) を入れます。Homebrew なら次です。
+1. [Hammerspoon](https://www.hammerspoon.org/go/) と、検証用の Lua をインストールします。Homebrew を使う場合は次を実行します。
 
    ```sh
    brew install --cask hammerspoon
-   ```
-
-2. この repo を `~/.hammerspoon` に置きます。Hammerspoon は `~/.hammerspoon/init.lua` を読みます。
-3. Hammerspoon を起動する前に、`init.lua` の `config` を自分の環境に合わせます。最低限、`hidRemap` と `appSwitchers` を確認します。
-4. 検証に使う `lua` と `luac` がなければ入れます。
-
-   ```sh
    brew install lua
    ```
 
-5. Hammerspoon を起動し、Accessibility access を許可します。
-6. Hammerspoon menu の **Reload Config** を実行し、Console に error がないことを確認します。
+2. このリポジトリを `~/.hammerspoon` に置きます。Hammerspoon は `~/.hammerspoon/init.lua` を読み込みます。
+3. 起動前に `init.lua` の `config` を自分の環境に合わせます。特に `hidRemap` と `appSwitchers` を確認してください。詳細は [設定ガイド](docs/configuration.md) を参照してください。
+4. リポジトリのルートで `./scripts/check` を実行します。
+5. Hammerspoon を起動し、アクセシビリティへのアクセスを許可します。
+6. Hammerspoon のメニューから **Reload Config** を実行し、Console にエラーがないことを確認します。
 
-操作できなくなったときは、[操作を戻す](#操作を戻す) へ進みます。
+## 主な機能
 
-## 何が動くか
-
-各機能の割り当てと ON/OFF は `init.lua` の該当 field が正です。ここには、設定を開いたときに迷わないための役割だけを書きます。
+現在の割り当てと有効・無効は `init.lua` で確認してください。
 
 | 設定 | 役割 |
 | --- | --- |
-| `config.hidRemap` | 物理キーの Input Remap。指定できる key は `caps_lock`、`left_control`、`left_command` |
-| `config.commandKeys` | Command key の単体押し。初期設定は JIS の `英数` / `かな` |
-| `config.controlLayer.bindings` | Hotkey で別キー、または修飾付きキーを送る。初期設定は矢印、削除、F5 → `cmd+r` |
-| `config.appHotkeyBlockers` | 対象 app が frontmost の間だけ、指定 Hotkey で app 本来の操作を無効化する |
-| `config.appSwitchers` | 対象 app の起動、focus、hide、window cycle |
-| `config.appInputSources` | 対象 app が frontmost になったときの入力ソース。初期設定は Zed、cmux、Visual Studio Code で英数 |
-| `config.unicodeConverter` | 文字と code point の相互変換。初期設定では無効 |
-| `config.timer` | one-shot countdown。初期設定は ctrl+p |
-
-App Switcher は、対象 app が未起動なら起動、frontmost なら app 全体を hide、それ以外なら focus します。複数 window がある場合は、各 display で現在表示中の Space にある window だけを cycle します。いまの Space に対象 window がない場合だけ、別の Space へ移動します。
-
-## 設定の直し方
-
-通常は `init.lua` の `config` だけを変えます。`modules/` は実装なので、機能追加や不具合修正のとき以外は触りません。
-
-Hotkey の共通 field は `mods` と `key` です。`mods` は各 entry で `{ "ctrl" }` のように明示します。`id` は省略でき、各 feature が導出します。`enabled = false` を付けると登録しません。`enabled` を省略したときは有効です。
-
-同じ `mods + key` を複数の有効な設定に使うと、Config Preflight が `duplicates Hotkey Identity` error を出して reload を中止します。新しい entry を足すのではなく置き換える場合は、元の entry を編集します。
-
-Hotkey の修飾キーには `ctrl`、`alt`、`shift`、`cmd` を指定します。`control`、`option`、`command` も使えます。同じ修飾キーを重ねても同じ組み合わせとして重複を検出します。`fn` は [hs.hotkey の対応する修飾キー](https://www.hammerspoon.org/docs/hs.hotkey.html#new)に含まれないため、Hotkey の設定では error にします。Control Layer の送り先では引き続き使用できます。
-
-`bindings`、`mappings`、app の list、`mods` は、途中の番号を飛ばさず `{ ... }` で並べます。辞書形式や穴あき list は Config Preflight が拒否します。Input Remap で同じ入力キーを二重に指定することもできません。`commandKeys.bindings` の対象は `cmd` / `rightcmd`、`outputKeyCode` は 0〜65535 の整数です。
-
-### App Switcher
-
-各 entry は対象 app の `appName`、`mods`、`key` です。`appName` は実際の app bundle 名に合わせます。
-
-```lua
-{ appName = "対象の app 名", mods = { "ctrl" }, key = "r" },
-```
-
-- 対象だけ変えるときは `appName` を書き換えます。
-- ショートカットを変えるときは `key` または `mods` を変えます。
-- 足すときは同じ形の entry を追加し、`mods + key` を一意にします。
-- 一時停止は `enabled = false`、削除は entry 全体を消します。
-
-### そのほか
-
-- **Input Remap を止める**: `config.hidRemap.enabled = false`。reload すると、この設定が適用した remap を解除します。mapping を変えるときは `mappings` の `from` と `to` を編集します。
-- **App Hotkey Blocker**: list です。対象 app が frontmost の間だけ有効です。止めるときはその entry に `enabled = false`。Chrome Beta など別名の app は、実際の app 名に `appName` を合わせます。
-- **Control Layer**: `{ mods = { "ctrl" }, key = "h", to = "delete" }` の形です。送り先が修飾付きのときは `to = { mods = { "cmd" }, key = "r" }` です。長押しで repeat させない場合は `repeatable = false` を付けます。`id` は省略時に `to` から導出します。後方削除は `delete`、前方削除は `forwarddelete` です。
-- **App Input Source**: `{ appName = "Zed", source = "eisu" }` の形です。`source` は `eisu`（英数）または `kana`（かな）です。止めるときは `enabled = false`。
-- **Unicode Converter**: `enabled` を `true` にすると登録します。変換例は `あ` ↔ `U+3042` です。`U+3042`、`0x3042`、`3042` を受け付けます。
-- **Timer**: `enabled = false` で登録しません。Hotkey を変えるときは `mods` と `key` を編集します。既定は分（1〜180）で、入力中の `Tab` で秒（1〜10800）と分を切り替えます。`s` で秒、`m` で分へ切り替える操作も利用できます。数字と `s` / `m` 以外は受け付けません。完了時は短い `Tink` をシステム音量の25%で1回鳴らし、alert は画面をクリックするまで消えません。
+| `config.hidRemap` | 物理キーを別のキーへ変換する Input Remap |
+| `config.commandKeys` | Command キーの単体押しで英数・かなを切り替える |
+| `config.controlLayer.bindings` | Hotkey で別のキーや修飾キー付きの入力を送る Control Layer |
+| `config.appHotkeyBlockers` | 対象アプリが最前面の間だけ、指定した Hotkey でアプリ本来の操作を無効にする |
+| `config.appSwitchers` | アプリの起動、フォーカス、非表示、ウィンドウの切り替えを行う App Switcher |
+| `config.appInputSources.bindings` | 対象アプリが最前面になったときに入力ソースを切り替える |
+| `config.unicodeConverter` | 文字とコードポイントを相互変換する |
+| `config.timer` | 同時に1本のカウントダウンを実行する |
 
 ## 変更を反映する
 
-1. repo root で `./scripts/check` を実行します。
-2. Hammerspoon menu の **Reload Config** を実行します。Control Layer の F5 は Hammerspoon の reload ではありません。
-3. Console に error がないことを確認します。Config Preflight error なら、表示された `config...` の field path を直します。
-4. 変えた操作と、重複しそうな既存の操作を実機で確認します。
-
-App Switcher を変えたときは、対象 app の起動、focus、hide、必要なら window cycle を確認します。全機能の checklist は [`docs/verification.md`](docs/verification.md) です。
+1. `init.lua` の `config` を編集します。通常の設定変更では `modules/` を触る必要はありません。
+2. リポジトリのルートで `./scripts/check` を実行します。
+3. Hammerspoon のメニューから **Reload Config** を実行します。Control Layer の `F5` は `cmd+r` の送信であり、Hammerspoon の設定を再読み込みする操作ではありません。
+4. Console にエラーがないことを確認します。`invalid Hammerspoon config:` が出た場合は、表示された `config...` の項目を修正します。
+5. [検証手順](docs/verification.md) に沿って、変更した操作と影響する既存の操作を実機で確認します。
 
 ## 操作を戻す
 
-modifier remap で操作できなくなったら、別の terminal または入力手段から次を実行して解除し、設定を直してから reload します。
+物理キーの変換によって操作できなくなった場合は、別のターミナルや入力手段から次を実行します。
 
 ```sh
 hidutil property --set '{"UserKeyMapping":[]}'
 ```
+
+`UserKeyMapping` が空になり、物理キーの変換が解除されます。その後、`config.hidRemap` を修正するか `enabled = false` にしてから **Reload Config** を実行してください。
+
+## ドキュメント
+
+| 文書 | 内容 |
+| --- | --- |
+| [設定ガイド](docs/configuration.md) | 設定の書き方、各機能の操作と制約 |
+| [検証手順](docs/verification.md) | 自動検証と実機確認のチェックリスト |
+| [用語集](CONTEXT.md) | このリポジトリで使う用語 |
+| [エージェント向け作業ガイド](AGENTS.md) | 作業時の規約と確認事項 |
+| [用語・設計判断の参照先](docs/agents/domain.md) | コードを調べる前に読む文書 |
+| [Issue 管理](docs/agents/issue-tracker.md) | GitHub Issues の操作と triage の対象範囲 |
+| [Triage ラベル](docs/agents/triage-labels.md) | ラベルの意味と対応関係 |
+| [コードベース改善の記録](docs/strategy/codebase-improvement.md) | 完了済みの改善と、その判断理由 |

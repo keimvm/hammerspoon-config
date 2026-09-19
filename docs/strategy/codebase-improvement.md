@@ -1,154 +1,81 @@
-# コードベース改善戦略
+# コードベース改善の記録
 
-この文書は、`.hammerspoon` のコードベース全体を継続的に改善するための判断を記録する。個別の実装案を先に固定せず、目的、評価軸、優先順位を合意してから実行単位へ分解する。
+2026-07-11 に進めた改善の目的、設計判断、完了結果を記録します。M1〜M4 は完了済みです。現在の検証方法は [検証手順](../verification.md)、設定と操作は [設定ガイド](../configuration.md) を参照してください。
 
-## 目的
+## 目的と判断基準
 
-入力操作を壊さず、安心して設定を変更できる状態にする。
+目的は、入力操作を壊さず、安心して設定を変更できる状態にすることです。保守性、テスト、モジュール構成の整理は、そのための手段として評価します。新機能の追加速度や抽象化の統一より、変更時の回帰検出と復旧しやすさを優先します。
 
-保守性、テスト、module 構成の整理はそれ自体を目的にせず、この「安全な変更可能性」を高める手段として評価する。
+改善は個別の実装案を先に固定せず、目的、評価軸、優先順位を合意してから実行単位へ分ける方針としました。挙動を変える必要がある場合は、構造の整理とは別の変更として扱います。
 
-## 現状
+## 設計判断（2026-07-11）
 
-- `init.lua` が設定値、`modules/` が feature の実装を所有する構成になっている。
-- Hotkey Registry により、Hotkey metadata の検証と重複検出は一元化されている。
-- `luac -p init.lua modules/*.lua` による syntax check は成功する。
-- Hammerspoon process は起動しているが、CLI から IPC message port へ接続できない。この環境では live reload を自動検証の前提にできない。
-- repo-local verification、Config Preflight、Input Remap の安全性、App Switcher の検証は M1〜M4 で完了している。
+### 自動検証と実機確認を分ける
 
-## 判断ログ
+自動検証（Automated Verification）は `luac`、Git の追跡確認、fake `hs` を使い、構文、設定、入力ロジックを再現可能な形で検証します。実機確認（Manual Runtime Verification）は、Hammerspoon と macOS 上で Hotkey、`eventtap`、`hidutil`、アプリのフォーカスなどを確認します。
 
-### 2026-07-11: 改善の最上位目的
+当時は Hammerspoon のプロセスが起動していても CLI から IPC に接続できなかったため、IPC による再読み込みを自動検証の必須条件にしませんでした。この記録は現在の環境での接続可否を示すものではありません。
 
-「入力操作を壊さず、安心して設定を変更できる状態」を最上位目的とする。新機能の追加速度や抽象化の統一より、変更時の回帰検出と復旧可能性を優先する。
+### 設定と適用順を `init.lua` に保つ
 
-### 2026-07-11: 二層の検証
+`init.lua` は次の三段構成としました。
 
-検証を次の二層に分ける。
+1. 単一の `config` テーブルに Desired Hotkey と各機能の設定を宣言する。
+2. `configValidation.validate(config)` で設定全体を検証する。
+3. 成功した場合だけ、各機能の適用・登録処理を明示的に呼ぶ。
 
-1. **Automated Verification**: `luac`、tracked-file check、fake `hs` adapter を使い、syntax、設定、入力ロジックを再現可能な形で検証する。
-2. **Manual Runtime Verification**: 実際の Hammerspoon と macOS 上で、Hotkey、`eventtap`、`hidutil`、app focus など OS integration の挙動を確認する。
+設定値は `init.lua`、動作の実装は `modules/` が管理します。適用順を隠す大きな調整用モジュールは作りません。Unicode Converter の有効・無効も `config.unicodeConverter.enabled` と再読み込みで切り替え、Hotkey やメニューバーに別の状態を持たせない方針です。
 
-Hammerspoon IPC への接続を自動検証の必須条件にはしない。自動検証は decision logic と設定不備の検出を担当し、macOS integration 固有の最終確認だけを短い manual checklist に残す。
+### 設定全体を副作用より前に検証する
 
-### 2026-07-11: 改善中に維持する挙動
+Hotkey の登録、`eventtap` や `hidutil` の開始より前に Config Preflight を行い、設定不備によって一部の処理だけが適用される状態を防ぎます。
 
-architecture 改善中は、次の user-visible behavior を変更しない。挙動変更が必要になった場合は、refactor と混ぜずに別の変更として扱う。
+対象は必須項目と型、未知のキー・修飾キー、Hotkey Identity と `id` の重複、Input Remap の変換定義、有効・無効の指定です。不備は最初の1件で止めず、項目のパスとともに集約して一つのエラーにします。入力された設定データは変更せず、アプリなどの環境依存の存在確認は行いません。
 
-- `caps_lock` を `left_control` として扱う。
-- `left_control` を `left_command` として扱う。
-- Command key の単体押しで `英数` / `かな` を送信する。
-- `ctrl+i/j/k/l` で arrow key を送信し、長押しを repeat する。
-- App Switcher が app の起動、focus、hide、window cycle を行う。
-- Unicode Converter の文字と code point の相互変換を維持する。
+### Input Remap のモジュールを統合しない
 
-Unicode Converter の ON/OFF は固定された user-visible behavior ではなく、容易に変更できる設定として維持する。
+`hid_remap`、`command_keys`、`control_layer` は、それぞれ `hidutil` のタスク、Command 単体押しの状態管理、Hotkey の登録を担当します。検証では、3モジュールをまたぐ共有状態、必須の呼び出し順、共通の後始末は確認されませんでした。
 
-### 2026-07-11: Unicode Converter の ON/OFF
+そのため、機能ごとのモジュールを維持し、共通のライフサイクル管理や、既存モジュールを順に呼ぶだけの調整用モジュールは追加しませんでした。共通化は、複数モジュールで守るべき条件が実際に確認できた場合に限ります。
 
-Unicode Converter の ON/OFF は、`init.lua` の `unicodeConverter.enabled` を `true` / `false` に変更し、Hammerspoon を reload して反映する。runtime Hotkey や menubar に別の状態を持たせず、`init.lua` を稼働状態の source of truth とする。
+### App Switcher は既存の呼び出し口から検証する
 
-### 2026-07-11: Input Remap の module 構成
+まず既存の `toggleOrCycle` を fake `hs` 経由で検証し、不自然または過度に複雑になった場合だけ内部の分離を検討する方針としました。起動、非表示、フォーカス、ウィンドウの巡回、再表示を既存の呼び出し口から検証できたため、テストのためだけの公開メソッドや実行環境用のアダプターは追加しませんでした。
 
-`hid_remap`、`command_keys`、`control_layer` は一つの lifecycle module に統合しない。それぞれ `hidutil` task、modifier tap の状態機械、Hotkey 登録という異なる lifecycle と挙動を所有しているため、feature module として維持する。
+### 改善中に維持した操作
 
-共通 module は、M1 の検証によって cross-module invariant が実在すると確認できた場合に限って追加する。設定を受け取って既存 module を順番に呼ぶだけの浅い orchestrator は作らない。
+- 物理 `caps_lock` → `left_control`、物理 `left_control` → `left_command` の変換。
+- Command キーの単体押しによる英数・かなの送信。
+- `ctrl+i/j/k/l` による矢印入力と、長押しの繰り返し入力。
+- App Switcher の起動、フォーカス、非表示、ウィンドウの巡回。
+- Unicode Converter の文字とコードポイントの相互変換。有効・無効は変更可能な設定として維持。
 
-### 2026-07-11: Config の preflight validation
+これは当時の維持対象です。その後の機能や割り当ては [init.lua](../../init.lua) で確認してください。
 
-Hotkey 登録、`eventtap` の開始、`hidutil` task の開始より前に、設定全体を side-effect-free に検証する。reload の途中で一部の side effect だけが適用される状態を避ける。
+## 完了したマイルストーン
 
-最初の対象は次に限定する。
-
-- 必須 field と型
-- unknown key / modifier
-- Hotkey Identity と `id` の重複
-- Input Remap の mapping
-- enabled / disabled item の整合性
-- `dirToOpen` の型
-
-app や directory が現在存在するかは環境依存なので、config validation error にはしない。
-
-### 2026-07-11: `init.lua` の config shape
-
-`init.lua` は次の三段構成にする。
-
-1. 単一の `config` table に、すべての Desired Hotkey と feature 設定を宣言する。
-2. `configValidation.validate(config)` で設定全体を preflight する。
-3. validation が成功した場合だけ、各 feature module の `apply` / `bind` を明示的に呼ぶ。
-
-設定値の source of truth は引き続き `init.lua` とする。適用順を隠す大きな orchestrator module は作らない。
-
-### 2026-07-11: Config validation error
-
-config validation は最初の不備で停止せず、検出した不備を field path とともに集約し、最後に一つの multi-line error として失敗させる。validator は入力された config を mutate しない。
-
-これにより、一度の automated verification または reload で修正箇所をまとめて把握できるようにする。
-
-### 2026-07-11: Input Remap の lifecycle 評価
-
-M3 では、各 feature module の現行 interface から lifecycle、side effect、cleanup を検証した。確認できた risk は feature 内に閉じる次の2件だった。
-
-- HID mapping を無効化しても OS に既存 mapping が残る cleanup 漏れ。
-- 左右 Command key を同時に使うと、aggregate な `cmd` flag だけでは片側の release を識別できず、単体押し判定の状態が残る問題。
-
-HID mapping は明示的な無効化時に空の `UserKeyMapping` を適用し、Command key は key ごとの `flagsChanged` event で状態を遷移させる。Control layer を含む3 module 間には、共有 state、必須の呼び出し順、共通 cleanup は確認されなかった。そのため、feature module を維持し、共通 lifecycle module は追加しない。
-
-### 2026-07-11: App Switcher の検証 seam
-
-最初に現在の `toggleOrCycle(appName, dirToOpen)` interface を fake `hs` 経由でテストする。未起動時の launch、frontmost 時の hide、非 frontmost 時の focus、window cycle、window がない場合の reopen、`dirToOpen` 失敗時の fallback をこの interface から検証する。
-
-現行 interface からのテストが不自然または過度に複雑だと確認できた場合だけ、window selection などの decision logic に internal seam を追加する。テストのためだけに runtime adapter や public method を先に増やさない。
-
-### 2026-07-11: App Switcher の testability 評価
-
-M4 では、`toggleOrCycle(appName, dirToOpen)` から launch、hide、focus、stable window cycle、reopen、directory fallback を自然に検証できた。追加の test setup は system boundary にある `hs.fs.dir` の fake だけであり、window selection の internal seam や public diagnostic method は追加しない。
-
-Manual Runtime Verification では、実 Hammerspoon の `hs.fs.dir` が利用できない directory に対して `nil` ではなく error を返すことを確認した。module 内でこの error を吸収して通常 launch へ fallback し、fake `hs` も同じ error mode を再現する。runtime 固有の error mode を外部 interface へ漏らさず、既存の user-visible behavior を維持する。
-
-## マイルストーン
-
-### M1: Verification Baseline
-
-architecture を変更する前に、現行挙動を守る検証基盤を作る。
-
-- repo-local な単一検証コマンドを用意する。
-- syntax check と tracked-file check を自動化する。
-- fake `hs` adapter を使い、維持対象の user-visible behavior を characterization test で固定する。
-- Hotkey、`eventtap`、`hidutil`、app focus を確認する短い manual checklist を用意する。
-- GitHub issue #5 の現状を再評価し、Acceptance Criteria を満たしたら完了扱いにする。
-
-M1 が完了するまで、Input Remap や App Switcher の architecture refactor には着手しない。
-
-### M2: Config Preflight
-
-すべての runtime side effect より前に設定全体を検証する seam を追加する。GitHub issue #3 は、validation 項目を無制限に増やすのではなく、partial apply を防ぐための preflight として再定義する。
-
-### M3: Input Remap の安全性
-
-M1 の behavior contract と M2 の preflight を使い、Input Remap を feature module ごとに検証する。GitHub issue #2 は lifecycle module の新設を既定路線にせず、実在する cross-module invariant、cleanup 漏れ、ordering dependency があるかを再評価する。問題が確認できなければ module 統合は行わない。
-
-### M4: App Switcher の検証
-
-M1 の fake `hs` adapter を使い、App Switcher を現在の interface から characterization test する。GitHub issue #4 は testability の実測に基づいて再評価し、現行 interface で十分なら architecture refactor を行わない。
-
-## 実行ルール
-
-各マイルストーンは独立した gate とし、次の条件をすべて満たしたときだけ完了とする。
-
-- automated verification がすべて成功する。
-- 対象範囲の Manual Runtime Verification が成功する。
-- user-visible behavior に意図しない差分がない。
-
-条件を満たせない場合は次のマイルストーンへ進まない。そのマイルストーン内で修正するか、変更を取り消す。複数のマイルストーンを一つの refactor にまとめない。
-
-## Issue mapping
-
-| Milestone | GitHub issue | 役割 |
+| 段階 | 関連 Issue | 実施結果 |
 | --- | --- | --- |
-| M1 | #5 Verification Baseline を整備する | Automated / Manual Verification の基準を作る |
-| M2 | #3 Config Preflight を追加する | partial side effect を防ぐ |
-| M3 | #2 Input Remap の安全性を検証する | feature module ごとに検証し、実在する risk だけを解消する |
-| M4 | #4 App Switcher を現行 interface から検証する | 現行 interface を評価し、必要な場合だけ internal seam を追加する |
+| M1: Verification Baseline | #5 | 単一の検証コマンド、Lua 構文と Git 追跡の確認、fake `hs` による既存挙動のテスト、実機確認の手順を整備 |
+| M2: Config Preflight | #3 | 設定全体を副作用より前に検証し、不備をまとめて報告 |
+| M3: Input Remap の安全性 | #2 | 既存モジュールごとに検証し、無効化時の HID 変換の解除と、左右 Command の同時操作を修正 |
+| M4: App Switcher の検証 | #4 | 既存の呼び出し口から挙動を検証し、追加の内部構造の分離は不要と判断 |
 
-M1 / issue #5、M2 / issue #3、M3 / issue #2、M4 / issue #4 は、Automated Verification と Manual Runtime Verification の完了 gate を満たして close した。現在、この戦略に未着手のマイルストーンはない。次の改善候補は、この完了状態を baseline として別の strategy / issue mapping で評価する。
+当時の完了記録では、各段階で自動検証、対象範囲の実機確認、意図しない挙動変更がないことを確認し、関連 Issue をクローズしました。この計画に未着手のマイルストーンはありません。
+
+### M3 で解消した問題
+
+- HID 変換を無効化しても OS に変換が残る問題は、明示的な無効化時に空の `UserKeyMapping` を適用して解消しました。
+- 左右 Command の同時操作で単体押し判定の状態が残る問題は、全体の `cmd` フラグだけに依存せず、キーごとの `flagsChanged` イベントで状態を更新して解消しました。
+
+### M4 の当時の検証範囲
+
+当時の `toggleOrCycle(appName, dirToOpen)` にはディレクトリを指定して起動する機能があり、失敗時に通常起動へ戻る動作も検証しました。実機の `hs.fs.dir` が利用できないディレクトリに対してエラーを返すことを確認し、実装で受け止め、fake `hs` にも同じ失敗を再現しました。
+
+`dirToOpen` とその処理は後に削除され、現在の呼び出し口は `toggleOrCycle(appName)` です。上記は過去の検証記録であり、現在の設定項目ではありません。
+
+## 当時の実行ルール
+
+M1 の完了前には Input Remap や App Switcher の構造変更に着手せず、M1〜M4 を独立した単位で進めました。各段階は、自動検証、対象範囲の実機確認、意図しない挙動変更がないことを完了条件としました。
+
+条件を満たさない場合はその段階で修正または変更を取り消し、複数段階を一つの構造変更にまとめない方針でした。次の改善は、この完了結果を基に別の計画と Issue で評価します。

@@ -1,15 +1,13 @@
-# Triage Labels
+# Triage ラベル
 
-engineering skills は、5 つの canonical triage role を前提に動きます。この file は、その role とこの repo の issue tracker で使う実際の label 文字列を対応付けます。
+スキルが使う5つの役割名（canonical role）を、そのまま GitHub Issues のラベル名として使います。Issue の操作方法は [Issue 管理](issue-tracker.md) を参照してください。
 
-| Label in mattpocock/skills | Label in our tracker | Meaning |
-| -------------------------- | -------------------- | ------- |
-| `needs-triage`             | `needs-triage`       | maintainer が issue を評価する必要がある |
-| `needs-info`               | `needs-info`         | reporter からの追加情報待ち |
-| `ready-for-agent`          | `ready-for-agent`    | 仕様が揃っていて AFK agent が拾える |
-| `ready-for-human`          | `ready-for-human`    | 人間による実装が必要 |
-| `wontfix`                  | `wontfix`            | 対応しない |
+| 役割名・ラベル名 | 意味 |
+| --- | --- |
+| `needs-triage` | メンテナーによる評価が必要 |
+| `needs-info` | 報告者からの追加情報待ち |
+| `ready-for-agent` | 仕様が揃い、エージェントが自律的に実装できる |
+| `ready-for-human` | 人間による実装が必要 |
+| `wontfix` | 対応しない |
 
-skill が role に言及した場合、たとえば "apply the AFK-ready triage label" と言った場合は、この table の対応する label 文字列を使います。
-
-実際の issue tracker 側の label vocabulary を変更した場合は、右側の column を更新してください。
+たとえば、スキルが「AFK-ready のラベルを付ける」と指示した場合は `ready-for-agent` を使います。実際のラベル名を変更する場合は、この表も更新し、役割との対応を残してください。

@@ -1,53 +1,17 @@
-# Domain Docs
+# 用語・設計判断の参照先
 
-engineering skills が codebase を探索するとき、この repo の domain documentation をどう読むかを定めます。
+このリポジトリは単一コンテキスト（single-context）の構成です。用語はルートの [CONTEXT.md](../../CONTEXT.md)、実装は `modules/` にあります。
 
-## Before exploring, read these
+## コードを調べる前に読む文書
 
-- repo root の **`CONTEXT.md`**。
-- repo root に **`CONTEXT-MAP.md`** がある場合は、それが context ごとの `CONTEXT.md` を指します。作業対象に関係するものを読みます。
-- **`docs/adr/`**。作業対象に関係する ADR を読みます。multi-context repo では、context 単位の decision を探すために `src/<context>/docs/adr/` も確認します。
+1. [CONTEXT.md](../../CONTEXT.md) で、作業対象に関係する用語を確認します。
+2. 設計判断が関係する場合は [コードベース改善の記録](../strategy/codebase-improvement.md) を読みます。完了済みの計画と当時の検証記録なので、現在の実装や動作はコードと [検証手順](../verification.md) で確認します。
+3. `docs/adr/` に ADR（設計判断の記録）がある場合は、関係するものを読みます。現在、このディレクトリはありません。
 
-これらの file が存在しない場合は、**静かに進めます**。存在しないこと自体を問題として扱ったり、先に作成するよう提案したりしません。`/domain-modeling` skill は、用語や decision が実際に整理されたタイミングで必要な file を lazy に作成します。
+ADR がないこと自体は問題として扱いません。文書を先に用意するためだけに作成せず、用語や判断を整理する必要が生じたときに記録します。
 
-## File structure
+## 用語と判断の扱い
 
-この repo は single-context layout です。
-
-```text
-/
-├── CONTEXT.md
-├── docs/adr/
-│   ├── 0001-example-decision.md
-│   └── 0002-example-decision.md
-└── modules/
-```
-
-multi-context repo では、root の `CONTEXT-MAP.md` が存在します。
-
-```text
-/
-├── CONTEXT-MAP.md
-├── docs/adr/
-└── src/
-    ├── frontend/
-    │   ├── CONTEXT.md
-    │   └── docs/adr/
-    └── backend/
-        ├── CONTEXT.md
-        └── docs/adr/
-```
-
-## Use the glossary's vocabulary
-
-issue title、refactor proposal、hypothesis、test name などで domain concept を名付けるときは、`CONTEXT.md` に定義された用語を使います。glossary が避けている synonym に drift しないようにします。
-
-必要な concept が glossary にまだない場合、それは signal です。project が使っていない言葉を作ってしまっている可能性があるなら見直します。本当に gap があるなら、`/domain-modeling` の対象として note します。
-
-## Flag ADR conflicts
-
-出力内容が既存 ADR と矛盾する場合は、静かに上書きせず、明示的に surface します。
-
-```text
-Contradicts ADR-0007 (event-sourced orders) -- but worth reopening because...
-```
+- Issue、改善案、仮説、テストなどで概念を名付けるときは、`CONTEXT.md` の用語を使います。
+- 用語集にない概念は、既存の用語で表せないか確認します。新しい概念が必要なら、用語集の追記候補として残します。
+- 既存の設計判断と異なる提案をする場合は、どの判断と矛盾し、なぜ見直すのかを明記します。
