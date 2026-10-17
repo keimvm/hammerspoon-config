@@ -41,7 +41,7 @@
    ```
 
    ```bash
-   git clone https://github.com/keimvm/hammerspoon.git ~/.hammerspoon
+   git clone https://github.com/keimvm/hammerspoon-config.git ~/.hammerspoon
    ```
 
 3. `~/.hammerspoon/config.lua` をエディタで開き、少なくとも次の2点を自分に合わせます。
