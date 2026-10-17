@@ -80,15 +80,17 @@ function M.bind(config)
         markDownStatesUsed(states)
         state.down = true
         state.used = isChord
+        syncChordTap()
       else
         state.down = false
+        -- 監視中の tap を送信直後に破棄すると、送信したキーが届かないことがあるため先に止める。
+        syncChordTap()
 
         if not state.used then
           hs.eventtap.keyStroke({}, state.outputKeyCode, 0)
         end
       end
 
-      syncChordTap()
       return false
     end
 

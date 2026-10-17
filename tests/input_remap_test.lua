@@ -189,6 +189,31 @@ test.test("Command key は通常の打鍵を Command 押下中以外は監視し
   test.equal(false, chordTap.started)
 end)
 
+test.test("Command key は入力切替キーを送る前に keyDown の監視を止める", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.command_keys")
+
+  require("modules.command_keys").bind({ bindings = {
+    { commandKey = "cmd", outputKeyCode = 0x66 },
+  } })
+
+  local types = hs.eventtap.event.types
+  local flagsTap, chordTap = state.eventtaps[1], state.eventtaps[2]
+  local chordTapStartedAtKeyStroke
+  local keyStroke = hs.eventtap.keyStroke
+  function hs.eventtap.keyStroke(...)
+    chordTapStartedAtKeyStroke = chordTap.started
+    keyStroke(...)
+  end
+
+  flagsTap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+  flagsTap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, {}))
+
+  test.equal(1, #state.keyStrokes)
+  test.equal(false, chordTapStartedAtKeyStroke)
+end)
+
 test.test("Command key は左右同時押しを chord として扱い単体押しへ復旧する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs
