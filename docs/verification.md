@@ -1,17 +1,21 @@
 # 検証手順
 
-自動検証（Automated Verification）で設定とロジックを確認し、実機確認（Manual Runtime Verification）で Hammerspoon と macOS の動作を確認します。自動検証の成功だけでは、実機確認が済んだことにはなりません。
+変更後に行う確認の手順です。自動検証（Automated Verification）で設定とロジックを確かめ、実機確認（Manual Runtime Verification）で Hammerspoon と macOS 上の動作を確かめます。自動検証が通っても、実機確認が済んだことにはなりません。
 
 ## 自動検証
 
-`lua` と `luac` が必要です。導入方法は [README](../README.md#はじめる) を参照してください。リポジトリのルートで次を実行します。
+`lua` と `luac` が必要です（`brew install lua`）。リポジトリのルートで次を実行します。
 
 ```sh
 ./scripts/check
 git diff --check
 ```
 
-`./scripts/check` は Lua の構文、`init.lua`・`config.lua`・`modules/*.lua` の Git 追跡、fake `hs` による挙動のテスト（`tests/*_test.lua` をすべて）を実行します。Hammerspoon には接続せず、実際のキー変換やアプリ操作は行いません。`git diff --check` は差分の空白エラーなどを確認します。
+`./scripts/check` は Lua の構文、`init.lua`・`config.lua`・`modules/*.lua` が Git で追跡されていること、fake `hs` による挙動のテスト（`tests/*_test.lua` のすべて）を確かめます。Hammerspoon には接続せず、実際のキー変換やアプリ操作は行いません。`git diff --check` は差分の空白の誤りなどを確かめます。
+
+1つのテストファイルだけを実行するときは `lua tests/run.lua tests/hotkeys_test.lua` のように指定します。
+
+[init_test.lua](../tests/init_test.lua) は、同梱の `config.lua` の割り当て（Hotkey の件数や `⌃G` が Google Chrome であることなど）を確かめます。`config.lua` の割り当てを変えたら、このテストも合わせて更新してください。
 
 | 対象 | 主な確認内容 | テスト |
 | --- | --- | --- |
@@ -25,17 +29,17 @@ git diff --check
 
 ## 実機確認
 
-自動検証の成功後、変更した機能と影響する機能の項目を実施します。文書だけの変更では、参照先と記載の整合性を確認します。
+自動検証が通ったら、変更した機能と、その影響を受ける機能の項目を実施します。文書だけの変更では、リンク先と記載内容が実装と合っているかを確かめます。
 
 最初に Hammerspoon のメニューから **Reload Config** を実行し、エラーの表示がないことを確認します。以下は [config.lua](../config.lua) の初期設定を前提としています。割り当てを変更している場合は読み替えてください。一時的に変更する値は控えておき、検証後に元へ戻します。
 
 ### Config Preflight と Safe Reload
 
 - [ ] `config.lua` の空白だけを変えて保存すると、何も表示されない。
-- [ ] `{ "ctrl+m", app = "Typora" }` を `{ "ctrl+m", app = "Typora", onyl = "Finder" }` に変えて保存すると、「再読み込みしませんでした（今の設定のまま動いています）」と `hotkeys[8].onyl: 不明な項目です（もしかして only）` が表示され、`⌃M` が引き続き動く。
+- [ ] `{ "ctrl+m", app = "Typora" }` を `{ "ctrl+m", app = "Typora", onyl = "Finder" }` に変えて保存すると、「設定に問題があるため再読み込みしませんでした（今の設定のまま動いています）」と `hotkeys[8].onyl: 不明な項目です（もしかして only）` が表示され、`⌃M` が引き続き動く。
 - [ ] 表示は画面をクリックすると消え、クリック先も通常どおり反応する。Console に同じ内容が残っている。
 - [ ] 元に戻して保存すると「設定を再読み込みしました（Hotkey 16 件）」と表示される。
-- [ ] 問題のある状態のまま Hammerspoon を再起動すると「何も適用していません」と表示され、直して保存すると適用される。
+- [ ] 問題のある状態のまま Hammerspoon を再起動すると「設定に問題があるため、何も適用していません」と表示され、直して保存すると適用される。
 - [ ] `hotkeys` を一時的に `(function() local t = {}; t[2] = { "ctrl+j", send = "left" }; t[4] = { "ctrl+l", send = "right" }; return t end)()` に変えて保存すると、リスト形式の問題が表示され、変更前の Hotkey が引き続き動く。確認後は元に戻す。
 
 ### Input Remap
@@ -96,4 +100,4 @@ git diff --check
 
 意図しない挙動があれば、変更を修正または取り消してから、自動検証と対象項目の実機確認をやり直します。報告時は自動検証と実機確認の結果を分け、未確認の項目があれば明記してください。
 
-物理キーの変換で操作が難しくなった場合は、[README の「操作を戻す」](../README.md#操作を戻す) に沿って変換を解除し、設定を修正します。
+物理キーの変換で操作が難しくなった場合は、[README の「キー配置を元に戻したい」](../README.md#キー配置を元に戻したい) に沿って変換を解除してから、設定を直します。

@@ -1,67 +1,210 @@
 # Hammerspoon Config
 
-macOS 用の Hammerspoon 設定です。物理キーの変換、Hotkey によるキー入力・アプリ切り替え、アプリごとの入力ソース切り替え、タイマー、コマンドパレットを提供します。
+キーボードから手を離さずに macOS を操作するための [Hammerspoon](https://www.hammerspoon.org/) の設定です。Hammerspoon は、Lua で書いた設定に従ってキー入力やアプリを操作する常駐アプリです。
 
-設定は [config.lua](config.lua) の1ファイルにまとまっています。保存すると内容を検証し、問題がなければ自動で再読み込みします。問題があれば今の設定のまま、どこが違うかを画面に表示します。
+この設定でできること:
 
-> [!IMPORTANT]
-> 初期設定では、物理 `caps_lock` を `left_control`、物理 `left_control` を `left_command`、物理の左右 Command を英数・かなキーに変換します。Hammerspoon を起動する前に、`config.lua` の `remap` が自分のキーボードに合うことを確認してください。
+- **キー配置の変更**: Caps Lock を Control に、左右の Command を英数・かなキーにするなど、物理キーを別のキーとして使う
+- **カーソル移動**: Caps Lock + `I` `J` `K` `L` で矢印キー、`H` `D` で削除
+- **アプリの切り替え**: 1つのキーで、アプリの起動・前面化・非表示・ウィンドウの切り替え
+- **入力ソースの自動切り替え**: エディタなどが前面になったら英数に切り替える
+- **タイマー**: 残り時間をメニューバーに出すカウントダウン
+- **コマンドパレット**: 設定した Hotkey の一覧（早見表）と実行
 
-## はじめる
+設定は [config.lua](config.lua) の1ファイルにまとまっています。保存すると内容を検証し、問題がなければすぐに反映します。
 
-1. [Hammerspoon](https://www.hammerspoon.org/go/) と、検証用の Lua をインストールします。
+> [!WARNING]
+> 初期設定ではキー配置が大きく変わります。特に **Command キーは英数・かなキーになり、`⌘C` などのショートカットは物理の左 Control で押す**ようになります。使い始める前に [キー配置](#キー配置) を読み、合わなければ [導入](#導入) の手順 3 で変更してください。
 
-   ```sh
+## 導入
+
+### 必要なもの
+
+- macOS
+- [Homebrew](https://brew.sh/ja/)
+- Git（初めて `git` を実行すると、macOS がインストールを案内します）
+
+### 手順
+
+1. Hammerspoon をインストールします。インストールしたら、まだ起動しないでください。
+
+   ```bash
    brew install --cask hammerspoon
-   brew install lua
    ```
 
-2. このリポジトリを `~/.hammerspoon` に置きます。Hammerspoon は `~/.hammerspoon/init.lua` を読み込みます。
-3. `config.lua` を自分の環境に合わせます。書き方は [設定ガイド](docs/configuration.md) を参照してください。
-4. リポジトリのルートで `./scripts/check` を実行します。
-5. Hammerspoon を起動し、アクセシビリティへのアクセスを許可します。
+2. この設定を `~/.hammerspoon` に置きます。Hammerspoon は、このフォルダの `init.lua` を読み込みます。
+
+   すでに `~/.hammerspoon` がある場合（以前に Hammerspoon を起動したことがある場合など）は、先に別の名前へ移しておきます。
+
+   ```bash
+   mv ~/.hammerspoon ~/.hammerspoon.backup
+   ```
+
+   ```bash
+   git clone https://github.com/keimvm/hammerspoon.git ~/.hammerspoon
+   ```
+
+3. `~/.hammerspoon/config.lua` をエディタで開き、少なくとも次の2点を自分に合わせます。
+   - **`remap`（キー配置）**: [キー配置](#キー配置) の変更が要らなければ、`remap = { ... },` の部分を丸ごと削除します。
+   - **`app = "..."` の行**: インストールしていないアプリ（Typora、cmux、Zed など）の行は、使うアプリに書き換えるか、削除します。
+
+   書き方は [設定ガイド](docs/configuration.md) にあります。テキストエディット（TextEdit）で編集する場合は、`"` が `“ ”` に置き換わると動かないため、メニューの［編集］→［自動置換］→［スマート引用符］をオフにしてください。
+
+4. Hammerspoon を起動します。
+
+   ```bash
+   open -a Hammerspoon
+   ```
+
+5. アクセシビリティを許可します。Hammerspoon の設定画面（メニューバーの金槌アイコン → **Preferences...**）で **Enable Accessibility** を押すか、**システム設定 → プライバシーとセキュリティ → アクセシビリティ** で Hammerspoon をオンにします。許可したら、金槌アイコンから **Reload Config** を選びます。
+
+6. 同じ設定画面で **Launch Hammerspoon at login** をオンにしておくと、ログインするたびに自動で起動します。
+
+### 動作を確かめる
+
+Caps Lock を押しながら `;` を押します（`remap` を削除した場合は Control + `;`）。コマンドパレットが開けば、設定が動いています。パレットには設定した Hotkey が一覧で並ぶので、早見表として使えます。Esc で閉じます。
+
+設定に問題があると、画面に問題の一覧が表示されます。直し方は [困ったとき](#困ったとき) を参照してください。
 
 ## 初期設定の操作
 
-| Hotkey | 動作 |
-| --- | --- |
-| `⌃I` `⌃J` `⌃K` `⌃L` | ↑ ← ↓ → を送る（長押しで繰り返す） |
-| `⌃H` / `⌃D` | 後方削除 / 前方削除 |
-| `F5` | `⌘R` を一度だけ送る |
-| `⌃M` `⌃F` `⌃O` `⌃T` `⌃R` `⌃G` | Typora、Finder、Microsoft Outlook、cmux、Zed、Google Chrome を起動・フォーカス・非表示・ウィンドウ切り替え |
-| `⌘D`（Google Chrome のみ） | ブックマーク追加を無効にする |
-| `⌃P` | タイマー |
-| `⌃;` | コマンドパレット（Hotkey の一覧と Command の実行） |
+### キー配置
 
-物理キーの変換により、`⌃` は物理 `caps_lock`、`⌘` は物理 `left_control` で押します。Zed、cmux、Visual Studio Code が最前面になると英数に切り替わります。
+物理キーを次のように変換します（`config.lua` の `remap`）。
+
+| 押すキー（物理） | 変換後 | 主な使い道 |
+| --- | --- | --- |
+| Caps Lock | Control（⌃） | 下の Hotkey |
+| 左 Control | Command（⌘） | `⌘C`、`⌘V` などのショートカット |
+| 左 Command | 英数 | 英字入力に切り替える |
+| 右 Command | かな | 日本語入力に切り替える |
+
+- Caps Lock としての機能（大文字の固定）はなくなります。
+- 変換はすべてのキーボードに働きます。
+- **Hammerspoon を終了しても、変換は残ります。** 戻し方は [キー配置を元に戻したい](#キー配置を元に戻したい) を参照してください。Mac を再起動しても元に戻ります。
+
+### Hotkey
+
+| 押すキー（物理） | 動作 |
+| --- | --- |
+| Caps Lock + `I` / `J` / `K` / `L` | ↑ / ← / ↓ / →（長押しで繰り返す） |
+| Caps Lock + `H` / `D` | 左の1文字を削除 / 右の1文字を削除 |
+| `F5` | `⌘R`（ブラウザの再読み込みなど）を1回送る |
+| Caps Lock + `M` | Typora に切り替える |
+| Caps Lock + `F` | Finder に切り替える |
+| Caps Lock + `O` | Microsoft Outlook に切り替える |
+| Caps Lock + `T` | cmux に切り替える |
+| Caps Lock + `R` | Zed に切り替える |
+| Caps Lock + `G` | Google Chrome に切り替える |
+| 左 Control + `D` | Google Chrome でだけ、何もしない（ブックマーク追加の `⌘D` を無効にする） |
+| Caps Lock + `P` | タイマーを開く |
+| Caps Lock + `;` | コマンドパレットを開く |
+
+- アプリの切り替えは、起動していなければ起動し、前面でなければ前面に出し、前面なら隠します。ウィンドウが複数あれば、前面に出すたびに次のウィンドウへ切り替わります。
+- Zed、cmux、Visual Studio Code が前面になると、自動で英数に切り替わります。
+- これらの Hotkey は、アプリ側のショートカットより優先されます。たとえばターミナルでは、Control + `R`（履歴検索）や Control + `K`（行末まで削除）が使えなくなります。困る場合は、[設定を変える](#設定を変える) の `except` でアプリを除外できます。
+- Mac のキーボードで F5 が明るさなどの機能キーになっている場合は、fn を押しながら F5 を押します。
+- `remap` を削除した場合は、表の Caps Lock を Control に、左 Control を Command に読み替えてください。
 
 ## 設定を変える
 
-1. `config.lua` を編集して保存します。
-2. 画面に「設定を再読み込みしました」と出れば反映済みです。問題があれば、今の設定のまま問題の一覧が出ます。一覧はクリックすると消え、全文は Hammerspoon Console に残ります。
-3. [検証手順](docs/verification.md) に沿って、変更した操作を実機で確認します。
+`config.lua` を編集して保存すると、すぐに反映されます。画面に「設定を再読み込みしました（Hotkey ○ 件）」と出れば完了です。
 
-`modules/` や `init.lua` を変えた場合は自動では再読み込みしません。コマンドパレットの「設定を再読み込み」か、Hammerspoon のメニューの **Reload Config** を使ってください。
+よく使う変更の例です。どれも `hotkeys = { ... }` の中で行います。
 
-## 操作を戻す
+**Hotkey を足す**: 次の行を加えると、Caps Lock + `S` で Safari に切り替えられます。
 
-物理キーの変換によって操作できなくなった場合は、コマンドパレットの「キー変換を一時解除」を選ぶか、別のターミナルや入力手段から次を実行します。
+```lua
+{ "ctrl+s", app = "Safari" },
+```
 
-```sh
+**Hotkey を止める**: 行頭に `--` を付けると、その行は使われません。
+
+```lua
+-- { "ctrl+m", app = "Typora" },
+```
+
+**一部のアプリでだけ止める**: Zed の行を次のように書き換えると、ターミナルでは Caps Lock + `R` が本来の Control + `R` として働きます。
+
+```lua
+{ "ctrl+r", app = "Zed", except = "ターミナル" },
+```
+
+- `config.lua` では、変換した後のキーで書きます。初期設定では、物理 Caps Lock が `ctrl`、物理の左 Control が `cmd` です。
+- 同じキーの組み合わせは2回書けません。書くと問題として表示されます。
+- アプリ名の正しい書き方は、[設定ガイドの「アプリ名の書き方」](docs/configuration.md#アプリ名の書き方) を参照してください。
+
+ほかの書き方と各機能の細かい動きは [設定ガイド](docs/configuration.md) にあります。
+
+## 困ったとき
+
+### キー配置を元に戻したい
+
+コマンドパレットで「キー変換を一時解除」を選ぶか、ターミナルで次を実行します。
+
+```bash
 hidutil property --set '{"UserKeyMapping":[]}'
 ```
 
-変換が解除されます。その後 `config.lua` の `remap` を直して保存してください。
+これは一時的な解除で、Hammerspoon が設定を読み直すと変換が戻ります。キー配置の変更をやめるなら、`config.lua` の `remap` を `remap = {},` に書き換えて保存します（`remap` を削除するだけでは、すでに働いている変換は解除されません）。
 
-## ドキュメント
+### 設定の問題が表示された
 
-| 文書 | 内容 |
+`hotkeys[3].app: 空でない文字列を指定してください` のように、どの項目に問題があるかが表示されます。`hotkeys[3]` は `hotkeys` の3番目の項目です。打ち間違いには `（もしかして only）` のように候補が出ます。
+
+- 問題があるあいだも、前の設定のまま動き続けます。直して保存すれば反映されます。
+- 表示は画面をクリックすると消えます。全文は金槌アイコンの **Console...** で確認できます。
+- Hammerspoon の起動時に問題があった場合は、何も適用せずに待ちます。直して保存すれば、その時点で適用されます。
+
+### Hotkey が効かない
+
+- **矢印や削除など、キーを送る動作だけが効かない**: アクセシビリティが許可されていません。[導入](#導入) の手順 5 を確認してください。Hammerspoon を更新した後は、アクセシビリティの一覧でいったんオフにしてからオンにし直すと直ることがあります。
+- **「登録できなかった Hotkey があります」と表示される**: 同じキーの組み合わせを、別のアプリや macOS が使っています。別の組み合わせに変えてください。
+- **アプリが切り替わらない**: `app` に書いたアプリ名を確認してください（[アプリ名の書き方](docs/configuration.md#アプリ名の書き方)）。
+- **`modules/` や `init.lua` を変えたのに反映されない**: 自動で再読み込みするのは `config.lua` だけです。コマンドパレットの「設定を再読み込み」か、金槌アイコンの **Reload Config** を使います。
+
+### 入力ソースが切り替わらない
+
+かなへの切り替えには、日本語の入力ソースが必要です。**システム設定 → キーボード → 入力ソース** で日本語を追加してください。対象のアプリ名は、最前面アプリの名前と完全に一致している必要があります（[アプリ名の書き方](docs/configuration.md#アプリ名の書き方)）。
+
+### 使うのをやめる
+
+1. 金槌アイコンから **Quit Hammerspoon** を選びます。
+2. [キー配置を元に戻したい](#キー配置を元に戻したい) のコマンドで、キー配置を戻します。
+3. `~/.hammerspoon` を削除します。導入時に退避した `~/.hammerspoon.backup` があれば、元の名前に戻します。
+4. Hammerspoon 自体も不要なら、`brew uninstall --cask hammerspoon` を実行します。
+
+## リポジトリの中身
+
+| パス | 内容 |
 | --- | --- |
-| [設定ガイド](docs/configuration.md) | `config.lua` の書き方と各機能の挙動 |
-| [検証手順](docs/verification.md) | 自動検証と実機確認のチェックリスト |
-| [用語集](CONTEXT.md) | このリポジトリで使う用語 |
-| [エージェント向け作業ガイド](AGENTS.md) | 作業時の規約と確認事項 |
-| [用語・設計判断の参照先](docs/agents/domain.md) | コードを調べる前に読む文書 |
-| [Issue 管理](docs/agents/issue-tracker.md) | GitHub Issues の操作と triage の対象範囲 |
-| [Triage ラベル](docs/agents/triage-labels.md) | ラベルの意味と対応関係 |
-| [コードベース改善の記録](docs/strategy/codebase-improvement.md) | 過去の改善と書き直しの判断理由 |
+| [config.lua](config.lua) | 設定。普段編集するのはこのファイルだけです |
+| [init.lua](init.lua) | Hammerspoon が最初に読むファイル。設定を検証してから各機能を起動します |
+| `modules/` | 各機能の実装 |
+| `tests/`、`scripts/check` | 自動テスト |
+| [docs/configuration.md](docs/configuration.md) | 設定ガイド。`config.lua` の書き方と各機能の動き |
+| [docs/verification.md](docs/verification.md) | 検証手順。変更後の自動検証と実機確認 |
+| [docs/design.md](docs/design.md) | 設計。構成、原則、設計判断 |
+| [CONTEXT.md](CONTEXT.md) | 用語集 |
+| [AGENTS.md](AGENTS.md) | AI エージェント向けの作業の決まり |
+
+## 開発する
+
+`init.lua` や `modules/` を変更する場合の流れです。
+
+1. 自動テスト用の Lua をインストールします。
+
+   ```bash
+   brew install lua
+   ```
+
+2. 変更する前に [設計](docs/design.md) で構成と原則を確かめます。
+3. 変更したら、リポジトリのルートで自動検証を実行します。Hammerspoon がなくても動きます。
+
+   ```bash
+   ./scripts/check
+   ```
+
+4. [検証手順](docs/verification.md) に沿って、変更した操作を実機で確かめます。
+
+起動テストは同梱の `config.lua` の割り当てを前提にしています。`config.lua` の割り当てを変えた場合は、[tests/init_test.lua](tests/init_test.lua) も合わせて更新してください。
