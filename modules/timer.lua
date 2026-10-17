@@ -1,15 +1,12 @@
+-- 同時に1本だけの one-shot countdown。残り時間はメニューバーに表示する。
+local ui = require("modules.ui")
+
 local M = {}
 
-local DEFAULT_MODS = { "ctrl" }
-local DEFAULT_KEY = "`"
 local MIN_MINUTES = 1
 local MAX_MINUTES = 180
 local MIN_SECONDS = 1
 local MAX_SECONDS = 10800
-local CHOOSER_WIDTH = 36
-local CHOOSER_ROWS = 1
-local CHOOSER_FG = { red = 0.96, green = 0.97, blue = 0.98, alpha = 1 }
-local CHOOSER_SUBTEXT = { red = 0.66, green = 0.70, blue = 0.76, alpha = 1 }
 local COMPLETION_SOUND_NAME = "Tink"
 local COMPLETION_SOUND_VOLUME = 0.25
 
@@ -18,17 +15,7 @@ local chooserVisible = false
 local unitToggleHotkey = nil
 local unit = "minutes"
 local running = nil
-local activeAlertIds = {}
-local alertDismissTap = nil
 local completionSound = nil
-
-local function copyList(list)
-  local copy = {}
-  for index, value in pairs(list) do
-    copy[index] = value
-  end
-  return copy
-end
 
 local function placeholderFor(currentUnit)
   if currentUnit == "seconds" then
@@ -44,6 +31,7 @@ local function rangeErrorFor(currentUnit)
   return string.format("%d〜%d分で入力してください", MIN_MINUTES, MAX_MINUTES)
 end
 
+-- 入力欄の s / m を単位の切り替えとして取り除き、残りを数値として読む。
 local function parseQuery(query, currentUnit)
   local nextUnit = currentUnit
   local cleanedChars = {}
@@ -54,51 +42,35 @@ local function parseQuery(query, currentUnit)
       nextUnit = "seconds"
     elseif char == "m" or char == "M" then
       nextUnit = "minutes"
-    elseif char:match("%d") then
-      table.insert(cleanedChars, char)
     else
-      hasUnsupportedCharacter = true
+      if not char:match("%d") then hasUnsupportedCharacter = true end
       table.insert(cleanedChars, char)
     end
   end
 
   local cleaned = table.concat(cleanedChars)
-  local amount = tonumber(cleaned)
-  local parsed = {
-    cleaned = cleaned,
-    unit = nextUnit,
-  }
+  local parsed = { cleaned = cleaned, unit = nextUnit }
 
   if hasUnsupportedCharacter then
     parsed.errorText = "数字と s / m だけ入力してください"
     return parsed
   end
-
   if cleaned == "" then return parsed end
 
-  if type(amount) ~= "number" or amount % 1 ~= 0 then
-    parsed.errorText = rangeErrorFor(nextUnit)
-    return parsed
+  local amount = tonumber(cleaned)
+  local min, max, seconds, suffix = MIN_MINUTES, MAX_MINUTES, 60, "分"
+  if nextUnit == "seconds" then
+    min, max, seconds, suffix = MIN_SECONDS, MAX_SECONDS, 1, "秒"
   end
 
-  if nextUnit == "minutes" then
-    if amount >= MIN_MINUTES and amount <= MAX_MINUTES then
-      parsed.valid = true
-      parsed.amount = amount
-      parsed.seconds = amount * 60
-      parsed.choiceText = string.format("%d分で開始", amount)
-    else
-      parsed.errorText = rangeErrorFor(nextUnit)
-    end
-  elseif amount >= MIN_SECONDS and amount <= MAX_SECONDS then
+  if amount and amount % 1 == 0 and amount >= min and amount <= max then
     parsed.valid = true
     parsed.amount = amount
-    parsed.seconds = amount
-    parsed.choiceText = string.format("%d秒で開始", amount)
+    parsed.seconds = amount * seconds
+    parsed.choiceText = string.format("%d%sで開始", amount, suffix)
   else
     parsed.errorText = rangeErrorFor(nextUnit)
   end
-
   return parsed
 end
 
@@ -111,40 +83,7 @@ end
 
 local function formatRemaining(seconds)
   local whole = math.ceil(seconds)
-  local mins = math.floor(whole / 60)
-  local secs = whole % 60
-  return string.format("%d:%02d", mins, secs)
-end
-
-local function dismissAlerts()
-  for _, alertId in ipairs(activeAlertIds) do
-    hs.alert.closeSpecific(alertId, 0)
-  end
-  activeAlertIds = {}
-
-  if alertDismissTap then
-    alertDismissTap:stop()
-    alertDismissTap = nil
-  end
-end
-
-local function announce(text)
-  local alertId = hs.alert.show(text, "indefinite")
-  if not alertId then return end
-
-  table.insert(activeAlertIds, alertId)
-  if alertDismissTap then return end
-
-  local eventTypes = hs.eventtap.event.types
-  alertDismissTap = hs.eventtap.new({
-    eventTypes.leftMouseDown,
-    eventTypes.rightMouseDown,
-    eventTypes.otherMouseDown,
-  }, function()
-    dismissAlerts()
-    return false
-  end)
-  alertDismissTap:start()
+  return string.format("%d:%02d", math.floor(whole / 60), whole % 60)
 end
 
 local function playCompletionSound()
@@ -152,7 +91,6 @@ local function playCompletionSound()
     completionSound = hs.sound.getByName(COMPLETION_SOUND_NAME)
     if completionSound then completionSound:volume(COMPLETION_SOUND_VOLUME) end
   end
-
   if completionSound then completionSound:play() end
 end
 
@@ -167,20 +105,22 @@ local function complete()
   if not running then return end
   local text = elapsedText(running.amount, running.unit)
   stopRunning()
-  announce(text)
+  ui.sticky(text)
   playCompletionSound()
+end
+
+local function remainingSeconds()
+  return running.endsAt - hs.timer.secondsSinceEpoch()
 end
 
 local function tick()
   if not running then return end
-  local remaining = running.endsAt - hs.timer.secondsSinceEpoch()
+  local remaining = remainingSeconds()
   if remaining <= 0 then
     complete()
     return
   end
-  if running.menubar then
-    running.menubar:setTitle(formatRemaining(remaining))
-  end
+  if running.menubar then running.menubar:setTitle(formatRemaining(remaining)) end
 end
 
 local function startCountdown(choice)
@@ -197,14 +137,7 @@ local function startCountdown(choice)
   if menubar then
     menubar:setTitle(formatRemaining(choice.seconds))
     menubar:setMenu(function()
-      return {
-        {
-          title = "キャンセル",
-          fn = function()
-            stopRunning()
-          end,
-        },
-      }
+      return { { title = "キャンセル", fn = stopRunning } }
     end)
   end
 
@@ -214,10 +147,9 @@ end
 local function applyQuery(query)
   local parsed = parseQuery(query, unit)
   unit = parsed.unit
-  if parsed.cleaned ~= query then
-    chooser:query(parsed.cleaned)
-  end
+  if parsed.cleaned ~= query then chooser:query(parsed.cleaned) end
   chooser:placeholderText(placeholderFor(unit))
+
   if parsed.valid then
     chooser:choices({
       {
@@ -241,24 +173,20 @@ end
 local function ensureChooser()
   if chooser then return chooser end
 
-  chooser = hs.chooser.new(function(choice)
+  chooser = ui.chooser(function(choice)
     chooserVisible = false
     disableUnitToggle()
     if not choice or not choice.seconds then return end
     startCountdown(choice)
   end)
 
+  -- Tab は入力画面を開いている間だけ、数値を保ったまま単位を切り替える。
   unitToggleHotkey = hs.hotkey.new({}, "tab", function()
     if not chooserVisible then return end
     unit = unit == "minutes" and "seconds" or "minutes"
     applyQuery(chooser:query() or "")
   end)
 
-  chooser:width(CHOOSER_WIDTH)
-  chooser:rows(CHOOSER_ROWS)
-  chooser:bgDark(true)
-  chooser:fgColor(CHOOSER_FG)
-  chooser:subTextColor(CHOOSER_SUBTEXT)
   chooser:queryChangedCallback(function(query)
     applyQuery(query or "")
   end)
@@ -266,29 +194,14 @@ local function ensureChooser()
   return chooser
 end
 
-function M.desiredHotkey(binding)
-  if type(binding) ~= "table" then return binding end
+-- 実行中なら残り時間（例: 12:34）を返す。
+function M.remainingText()
+  if not running then return nil end
+  return formatRemaining(math.max(remainingSeconds(), 0))
+end
 
-  local hotkey = {}
-  for key, value in pairs(binding) do
-    hotkey[key] = value
-  end
-
-  if hotkey.mods == nil then
-    hotkey.mods = copyList(DEFAULT_MODS)
-  elseif type(hotkey.mods) == "table" then
-    hotkey.mods = copyList(hotkey.mods)
-  end
-
-  if hotkey.key == nil then
-    hotkey.key = DEFAULT_KEY
-  end
-
-  if type(hotkey.id) ~= "string" or hotkey.id == "" then
-    hotkey.id = "timer.toggle"
-  end
-
-  return hotkey
+function M.cancel()
+  stopRunning()
 end
 
 function M.show()

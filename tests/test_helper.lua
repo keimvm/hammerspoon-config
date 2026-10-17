@@ -24,8 +24,10 @@ function M.contains(text, fragment, message)
   error(message or string.format("expected %s to contain %s", render(text), render(fragment)), 2)
 end
 
-function M.resetModule(name)
-  package.loaded[name] = nil
+function M.resetModules()
+  for name in pairs(package.loaded) do
+    if name:match("^modules%.") then package.loaded[name] = nil end
+  end
 end
 
 function M.run()

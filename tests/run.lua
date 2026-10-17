@@ -1,18 +1,14 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
-local testFiles = {
-  "tests/init_test.lua",
-  "tests/config_validation_test.lua",
-  "tests/hotkey_registry_test.lua",
-  "tests/input_remap_test.lua",
-  "tests/app_switcher_test.lua",
-  "tests/app_hotkey_blocker_test.lua",
-  "tests/app_input_source_test.lua",
-  "tests/timer_test.lua",
-  "tests/unicode_converter_test.lua",
-}
-
-if arg[1] then testFiles = { arg[1] } end
+-- 引数がなければ tests/*_test.lua をすべて実行する。
+local testFiles = {}
+if arg[1] then
+  testFiles = { arg[1] }
+else
+  local listing = assert(io.popen("ls tests/*_test.lua"))
+  for file in listing:lines() do table.insert(testFiles, file) end
+  listing:close()
+end
 
 for _, file in ipairs(testFiles) do
   dofile(file)

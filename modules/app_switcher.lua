@@ -1,56 +1,11 @@
+-- App Switcher。アプリを起動、フォーカス、非表示、またはウィンドウを順に切り替える。
+-- 候補は各ディスプレイで現在表示中の Space を優先する。
+local ui = require("modules.ui")
+
 local M = {}
 
 local log = hs.logger.new("app_switcher", "warning")
 local appState = {}  -- key: bundleID or appName -> { lastWinId = number }
-local DEFAULT_MODS = { "ctrl" }
-
-local function copyList(list)
-  local copy = {}
-  for index, value in pairs(list) do
-    copy[index] = value
-  end
-  return copy
-end
-
-local function derivedId(binding)
-  local mods = binding.mods
-  local key = binding.key
-  if type(key) ~= "string" or key == "" then return nil end
-  if type(mods) ~= "table" then
-    mods = DEFAULT_MODS
-  end
-
-  local parts = {}
-  for _, mod in ipairs(mods) do
-    if type(mod) == "string" and mod ~= "" then
-      table.insert(parts, string.lower(mod))
-    end
-  end
-  table.insert(parts, string.lower(key))
-  return "app-switcher." .. table.concat(parts, "+")
-end
-
-function M.desiredHotkey(binding)
-  if type(binding) ~= "table" then return binding end
-
-  local hotkey = {}
-  for key, value in pairs(binding) do
-    hotkey[key] = value
-  end
-
-  if hotkey.mods == nil then
-    hotkey.mods = copyList(DEFAULT_MODS)
-  elseif type(hotkey.mods) == "table" then
-    hotkey.mods = copyList(hotkey.mods)
-  end
-
-  if type(hotkey.id) ~= "string" or hotkey.id == "" then
-    local id = derivedId(hotkey)
-    if id then hotkey.id = id end
-  end
-
-  return hotkey
-end
 
 local function stateKey(app, fallbackName)
   return (app and app:bundleID()) or fallbackName
@@ -218,7 +173,7 @@ function M.toggleOrCycle(appName)
   local isCurrent
   wins, isCurrent = getPreferredCandidateWindows(wins, ids)
   if not wins then
-    hs.alert.show("デスクトップを確認できませんでした。もう一度押してください。", 2)
+    ui.toast("デスクトップを確認できませんでした。もう一度押してください。", 2)
     return
   end
 
@@ -238,12 +193,6 @@ function M.toggleOrCycle(appName)
   local idx = nextIndexByLastId(wins, appState[key].lastWinId)
   focusWindow(app, wins[idx])
   appState[key].lastWinId = wins[idx]:id()
-end
-
-function M.bindToggle(binding, registry)
-  registry:bind(M.desiredHotkey(binding), function()
-    M.toggleOrCycle(binding.appName)
-  end)
 end
 
 return M

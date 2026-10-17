@@ -70,17 +70,23 @@ function M.app(name, options)
   return app
 end
 
-function M.event(eventType, keyCode, flags, properties)
-  local event = {}
+local KEYCODES = {
+  a = 0, s = 1, d = 2, f = 3, h = 4, g = 5, z = 6, x = 7, c = 8, v = 9,
+  b = 11, q = 12, w = 13, e = 14, r = 15, y = 16, t = 17,
+  ["1"] = 18, ["2"] = 19, ["3"] = 20, ["4"] = 21, ["6"] = 22, ["5"] = 23,
+  ["="] = 24, ["9"] = 25, ["7"] = 26, ["-"] = 27, ["8"] = 28, ["0"] = 29,
+  ["]"] = 30, o = 31, u = 32, ["["] = 33, i = 34, p = 35, l = 37, j = 38,
+  ["'"] = 39, k = 40, [";"] = 41, ["\\"] = 42, [","] = 43, ["/"] = 44,
+  n = 45, m = 46, ["."] = 47, ["`"] = 50,
+  ["return"] = 36, tab = 48, space = 49, delete = 51, escape = 53,
+  ["pad+"] = 69,
+  f1 = 122, f2 = 120, f3 = 99, f4 = 118, f5 = 96, f6 = 97, f7 = 98, f8 = 100,
+  f9 = 101, f10 = 109, f11 = 103, f12 = 111,
+  home = 115, pageup = 116, forwarddelete = 117, ["end"] = 119, pagedown = 121,
+  left = 123, right = 124, down = 125, up = 126,
+}
 
-  function event:getType() return eventType end
-  function event:getKeyCode() return keyCode end
-  function event:getFlags() return flags or {} end
-  function event:getProperty(property) return properties and properties[property] end
-
-  return event
-end
-
+-- Hammerspoon の API のうち、この設定が使う部分だけを記録つきで再現する。
 function M.new()
   local state = {
     alertDetails = {},
@@ -89,6 +95,9 @@ function M.new()
     applications = {},
     appleScripts = {},
     choosers = {},
+    closedAlerts = {},
+    consoleOpened = 0,
+    delayedTimers = {},
     eventtaps = {},
     hotkeys = {},
     jsonValues = {},
@@ -96,33 +105,28 @@ function M.new()
     launchedApps = {},
     logs = {},
     menubars = {},
-    notifications = {},
-    notifyPresented = true,
     now = 1000,
+    operations = {},
+    pathwatchers = {},
     playedSounds = {},
+    rejectedKeys = {},
+    reloadCount = 0,
+    settings = {},
     soundRequests = {},
     sounds = {},
     tasks = {},
     timers = {},
-    pasteboardText = "",
-    operations = {},
-    keyboardModifiers = {},
-    closedAlerts = {},
     activeSpaces = { main = 1 },
   }
 
   local hs = {
     alert = {},
-    application = {},
+    application = { watcher = { activated = "activated" } },
     chooser = {},
+    configdir = ".",
     eventtap = {
       event = {
-        properties = {
-          eventSourceUserData = "eventSourceUserData",
-        },
         types = {
-          flagsChanged = "flagsChanged",
-          keyDown = "keyDown",
           leftMouseDown = "leftMouseDown",
           rightMouseDown = "rightMouseDown",
           otherMouseDown = "otherMouseDown",
@@ -130,63 +134,30 @@ function M.new()
       },
     },
     hotkey = {},
-    fs = {},
     json = {},
-    keycodes = {},
+    keycodes = { map = {} },
     logger = {},
     menubar = {},
-    notify = {},
     osascript = {},
-    pasteboard = {},
+    pathwatcher = {},
+    settings = {},
     spaces = {},
     sound = {},
     task = {},
     timer = {},
     window = {
+      animationDuration = 0.2,
       filter = { allowedWindowRoles = { AXStandardWindow = true, AXDialog = true, AXSystemDialog = true } },
     },
   }
-  hs.application.watcher = {
-    activated = "activated",
-  }
 
-  local keycodes = {
-    cmd = 55,
-    rightcmd = 54,
-    ["`"] = 50,
-    f5 = 96,
-    b = 11,
-    d = 2,
-    delete = 51,
-    f = 3,
-    forwarddelete = 117,
-    g = 5,
-    h = 4,
-    i = 34,
-    j = 38,
-    k = 40,
-    l = 37,
-    m = 46,
-    n = 45,
-    o = 31,
-    p = 35,
-    r = 15,
-    tab = 48,
-    t = 17,
-    u = 32,
-    up = 126,
-    left = 123,
-    down = 125,
-    right = 124,
-  }
-  hs.keycodes.map = setmetatable({}, {
-    __index = function(_, key)
-      table.insert(state.operations, "keycode.lookup")
-      return keycodes[key]
-    end,
-  })
+  for name, code in pairs(KEYCODES) do
+    hs.keycodes.map[name] = code
+    hs.keycodes.map[code] = name
+  end
 
   local function createHotkey(operation, enabled, mods, key, pressedFn, releasedFn, repeatFn)
+    if state.rejectedKeys[key] then error("key is reserved: " .. key) end
     table.insert(state.operations, operation)
     local hotkey = {
       enabled = enabled,
@@ -222,10 +193,7 @@ function M.new()
 
   function hs.application.watcher.new(callback)
     table.insert(state.operations, "application.watcher.new")
-    local watcher = {
-      callback = callback,
-      started = false,
-    }
+    local watcher = { callback = callback, started = false }
     function watcher:start()
       self.started = true
       return self
@@ -236,6 +204,14 @@ function M.new()
     end
     table.insert(state.applicationWatchers, watcher)
     return watcher
+  end
+
+  -- 最前面アプリの切り替えを application watcher へ届ける。
+  function state.activate(app)
+    state.frontmostApplication = app
+    for _, watcher in ipairs(state.applicationWatchers) do
+      if watcher.started then watcher.callback(app and app:name(), hs.application.watcher.activated, app) end
+    end
   end
 
   function hs.application.get(hint)
@@ -318,26 +294,18 @@ function M.new()
       self.visible = false
       return self
     end
+    -- 行を選んだときと同じく、閉じてから callback を呼ぶ。
+    function chooser:select(index)
+      self.visible = false
+      self.callback(self.currentChoices[index])
+    end
 
     table.insert(state.choosers, chooser)
     return chooser
   end
 
-  function hs.fs.dir()
-    return nil
-  end
-
   function hs.osascript.applescript(script)
     table.insert(state.appleScripts, script)
-    return true
-  end
-
-  function hs.pasteboard.getContents()
-    return state.pasteboardText
-  end
-
-  function hs.pasteboard.setContents(text)
-    state.pasteboardText = text
     return true
   end
 
@@ -348,11 +316,7 @@ function M.new()
   end
 
   function hs.timer.doEvery(interval, callback)
-    local timer = {
-      interval = interval,
-      callback = callback,
-      running = true,
-    }
+    local timer = { interval = interval, callback = callback, running = true }
     function timer:stop()
       self.running = false
       return self
@@ -361,15 +325,33 @@ function M.new()
     return timer
   end
 
+  hs.timer.delayed = {}
+  function hs.timer.delayed.new(delay, callback)
+    local timer = { delay = delay, callback = callback, running = false, starts = 0 }
+    function timer:start()
+      self.running = true
+      self.starts = self.starts + 1
+      return self
+    end
+    function timer:stop()
+      self.running = false
+      return self
+    end
+    -- 待ち時間が過ぎたことにして実行する。
+    function timer:fire()
+      self.running = false
+      self.callback()
+    end
+    table.insert(state.delayedTimers, timer)
+    return timer
+  end
+
   function hs.timer.secondsSinceEpoch()
     return state.now
   end
 
   function hs.menubar.new(inMenuBar)
-    local item = {
-      inMenuBar = inMenuBar ~= false,
-      deleted = false,
-    }
+    local item = { inMenuBar = inMenuBar ~= false, deleted = false }
     function item:setTitle(title)
       self.title = title
       return self
@@ -386,35 +368,11 @@ function M.new()
     return item
   end
 
-  function hs.notify.new(fnOrAttrs, attrs)
-    local attributes = attrs
-    if type(fnOrAttrs) == "table" then
-      attributes = fnOrAttrs
-    end
-    attributes = attributes or {}
-    local notification = {
-      attrs = attributes,
-      sent = false,
-    }
-    function notification:send()
-      self.sent = true
-      table.insert(state.notifications, attributes)
-      return self
-    end
-    function notification:presented()
-      return state.notifyPresented
-    end
-    return notification
-  end
-
   function hs.sound.getByName(name)
     table.insert(state.soundRequests, name)
     if state.soundUnavailable then return nil end
 
-    local sound = {
-      name = name,
-      playCount = 0,
-    }
+    local sound = { name = name, playCount = 0 }
     function sound:volume(level)
       if level == nil then return self.volumeValue end
       self.volumeValue = level
@@ -433,17 +391,9 @@ function M.new()
     table.insert(state.keyStrokes, { mods = mods, key = key, delay = delay })
   end
 
-  function hs.eventtap.checkKeyboardModifiers()
-    return state.keyboardModifiers
-  end
-
   function hs.eventtap.new(watchedTypes, callback)
     table.insert(state.operations, "eventtap.new")
-    local tap = {
-      watchedTypes = watchedTypes,
-      callback = callback,
-      started = false,
-    }
+    local tap = { watchedTypes = watchedTypes, callback = callback, started = false }
     function tap:start()
       self.started = true
       return self
@@ -458,9 +408,13 @@ function M.new()
 
   function hs.logger.new(name)
     local logger = {}
-    function logger.w(message)
-      table.insert(state.logs, { level = "warning", name = name, message = message })
+    local function record(level)
+      return function(message)
+        table.insert(state.logs, { level = level, name = name, message = message })
+      end
     end
+    logger.w = record("warning")
+    logger.e = record("error")
     function logger.wf(format, ...)
       logger.w(string.format(format, ...))
     end
@@ -474,12 +428,7 @@ function M.new()
 
   function hs.task.new(path, callback, args)
     table.insert(state.operations, "task.new")
-    local task = {
-      path = path,
-      callback = callback,
-      args = args,
-      started = false,
-    }
+    local task = { path = path, callback = callback, args = args, started = false }
     function task:start()
       self.started = true
       return true
@@ -488,6 +437,47 @@ function M.new()
     return task
   end
 
+  function hs.pathwatcher.new(path, callback)
+    local watcher = { path = path, callback = callback, started = false }
+    function watcher:start()
+      self.started = true
+      return self
+    end
+    table.insert(state.pathwatchers, watcher)
+    return watcher
+  end
+
+  function hs.settings.get(key)
+    return state.settings[key]
+  end
+
+  function hs.settings.set(key, value)
+    state.settings[key] = value
+  end
+
+  function hs.settings.clear(key)
+    state.settings[key] = nil
+    return true
+  end
+
+  function hs.reload()
+    state.reloadCount = state.reloadCount + 1
+  end
+
+  function hs.openConsole()
+    state.consoleOpened = state.consoleOpened + 1
+  end
+
+  return hs, state
+end
+
+-- fake hs を _G.hs に置き、読み込み済みの modules を捨てて新しい状態から始める。
+function M.install()
+  local hs, state = M.new()
+  _G.hs = hs
+  for name in pairs(package.loaded) do
+    if name:match("^modules%.") then package.loaded[name] = nil end
+  end
   return hs, state
 end
 

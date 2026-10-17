@@ -12,8 +12,9 @@
 ## 作業の入口
 
 - 利用手順と文書一覧は [README.md](README.md)、用語と設計判断の読み方は [docs/agents/domain.md](docs/agents/domain.md) を参照してください。
-- 設定値は `init.lua` の `config`、機能の実装は `modules/`、自動テストは `tests/` にあります。
-- 設定の変更方法は [docs/configuration.md](docs/configuration.md) にまとめています。現在の割り当てと有効・無効は `init.lua` を確認してください。
+- 設定値は `config.lua`、起動の順序は `init.lua`、機能の実装は `modules/`、自動テストは `tests/` にあります。
+- 設定の変更方法は [docs/configuration.md](docs/configuration.md) にまとめています。現在の割り当ては `config.lua` を確認してください。
+- `config.lua` は保存すると Hammerspoon が検証して自動で再読み込みします（Safe Reload）。作業中の途中状態でも、検証に通る内容なら実機に反映される点に注意してください。
 
 ## 変更と検証
 
