@@ -10,11 +10,13 @@ local hotkeyRegistry = require("modules.hotkey_registry").new()
 local configOverride = ...
 
 local config = configOverride or {
-  -- 物理キーの remap。
+  -- 物理キーの remap。左右 Command は英数・かなキーとして使う。
   hidRemap = {
     mappings = {
       { from = "caps_lock", to = "left_control" },
       { from = "left_control", to = "left_command" },
+      { from = "left_command", to = "eisu" },
+      { from = "right_command", to = "kana" },
     },
   },
   -- ctrl+i/j/k/l → 矢印、ctrl+h → 後方削除、ctrl+d → 前方削除、F5 → cmd+r
@@ -30,7 +32,9 @@ local config = configOverride or {
     },
   },
   -- Command 単体押しで入力ソースを切り替える。（JIS keyboard: 0x66 = 英数, 0x68 = かな）
+  -- 常時の keyDown 監視で打ち始めが遅れるため無効。左右 Command は hidRemap で英数・かなに変換している。
   commandKeys = {
+    enabled = false,
     bindings = {
       { commandKey = "cmd", outputKeyCode = 0x66 },
       { commandKey = "rightcmd", outputKeyCode = 0x68 },

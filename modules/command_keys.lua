@@ -6,7 +6,6 @@ local types = event.types
 local props = event.properties
 
 local tap
-local chordTap
 
 local function isIgnored(e, ignoredUserData)
   return ignoredUserData and e:getProperty(props.eventSourceUserData) == ignoredUserData
@@ -40,9 +39,8 @@ function M.bind(config)
     }
   end
 
-  -- 通常の打鍵を Hammerspoon の処理に通さないため、常時監視するのは flagsChanged だけにする。
-  -- keyDown とマウス押下は、対象の Command キーを押している間だけ別の eventtap で監視する。
-  local chordTypes = {
+  local watchedTypes = {
+    types.flagsChanged,
     types.keyDown,
     types.leftMouseDown,
     types.rightMouseDown,
@@ -50,23 +48,21 @@ function M.bind(config)
   }
   local synchronized = not eventtap.checkKeyboardModifiers().cmd
 
-  local function syncChordTap()
-    if hasDownState(states) then
-      chordTap:start()
-    else
-      chordTap:stop()
-    end
-  end
-
-  tap = eventtap.new({ types.flagsChanged }, function(e)
+  tap = eventtap.new(watchedTypes, function(e)
+    local eventType = e:getType()
     if not synchronized then
-      if not e:getFlags().cmd then
+      if eventType == types.flagsChanged and not e:getFlags().cmd then
         synchronized = true
       end
       return false
     end
 
     if isIgnored(e, config.ignoredEventSourceUserData) then return false end
+
+    if eventType ~= types.flagsChanged then
+      markDownStatesUsed(states)
+      return false
+    end
 
     local keyCode = e:getKeyCode()
     local state = states[keyCode]
@@ -80,11 +76,8 @@ function M.bind(config)
         markDownStatesUsed(states)
         state.down = true
         state.used = isChord
-        syncChordTap()
       else
         state.down = false
-        -- 監視中の tap を送信直後に破棄すると、送信したキーが届かないことがあるため先に止める。
-        syncChordTap()
 
         if not state.used then
           hs.eventtap.keyStroke({}, state.outputKeyCode, 0)
@@ -95,13 +88,6 @@ function M.bind(config)
     end
 
     markDownStatesUsed(states)
-    return false
-  end)
-
-  chordTap = eventtap.new(chordTypes, function(e)
-    if not isIgnored(e, config.ignoredEventSourceUserData) then
-      markDownStatesUsed(states)
-    end
     return false
   end)
 

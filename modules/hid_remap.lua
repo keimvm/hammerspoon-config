@@ -7,6 +7,10 @@ local hidUsage = {
   caps_lock = 0x700000039,
   left_control = 0x7000000E0,
   left_command = 0x7000000E3,
+  right_command = 0x7000000E7,
+  -- JIS キーボードの英数キー (LANG2) とかなキー (LANG1)。
+  eisu = 0x700000091,
+  kana = 0x700000090,
 }
 
 local function buildMapping(mapping)

@@ -27,13 +27,13 @@ Hotkey の設定では `mods` と `key` を指定します。`mods` は `{ "ctrl
 
 ## Input Remap
 
-`config.hidRemap.mappings` に、物理キーの変換元 `from` と変換先 `to` を指定します。使えるキーは `caps_lock`、`left_control`、`left_command` です。同じ `from` を二重には指定できません。
+`config.hidRemap.mappings` に、物理キーの変換元 `from` と変換先 `to` を指定します。使えるキーは `caps_lock`、`left_control`、`left_command`、`right_command`、`eisu`（英数キー）、`kana`（かなキー）です。同じ `from` を二重には指定できません。
 
 ```lua
 { from = "caps_lock", to = "left_control" },
 ```
 
-初期設定は `caps_lock` → `left_control`、`left_control` → `left_command` です。`config.hidRemap.enabled = false` にして再読み込みすると、`UserKeyMapping` を空にして変換を解除します。
+初期設定は `caps_lock` → `left_control`、`left_control` → `left_command`、`left_command` → `eisu`、`right_command` → `kana` です。左右 Command キーを押すと、英数・かなキーと同じように入力ソースが切り替わります。Command として使うのは物理 `left_control` です。`config.hidRemap.enabled = false` にして再読み込みすると、`UserKeyMapping` を空にして変換を解除します。
 
 ## Command キーの単体押し
 
@@ -45,6 +45,8 @@ Hotkey の設定では `mods` と `key` を指定します。`mods` は `{ "ctrl
 ```
 
 `commandKey` は `cmd` / `rightcmd`、`outputKeyCode` は 0〜65535 の整数です。同じ `commandKey` を二重には指定できません。初期設定は JIS キーボードの英数・かなです。ほかのキーと組み合わせた場合は、単体押しの入力切り替えを行いません。
+
+この機能はすべての打鍵を eventtap で監視するため、しばらく操作しなかった後の打ち始めが遅れることがあります。初期設定では `enabled = false` にして、代わりに `config.hidRemap` で左右 Command を英数・かなキーへ変換しています。有効にする場合は、`config.hidRemap` から `left_command` と `right_command` の変換を外してください。
 
 ## Control Layer
 

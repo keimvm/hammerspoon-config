@@ -3,7 +3,7 @@
 macOS 用の Hammerspoon 設定です。キー入力の変換、アプリの切り替え、入力ソースの切り替え、タイマーなどを提供します。設定値は [init.lua](init.lua) の `config`、機能の実装は `modules/` にあります。
 
 > [!IMPORTANT]
-> 初期設定では、設定の読み込み時に物理 `caps_lock` を `left_control`、物理 `left_control` を `left_command` に変換します。Hammerspoon を起動する前に、`config.hidRemap` が自分のキーボードに合うことを確認してください。
+> 初期設定では、設定の読み込み時に物理 `caps_lock` を `left_control`、物理 `left_control` を `left_command`、物理の左右 Command を英数・かなキーに変換します。Hammerspoon を起動する前に、`config.hidRemap` が自分のキーボードに合うことを確認してください。
 
 ## はじめる
 
