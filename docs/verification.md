@@ -19,7 +19,7 @@ git diff --check
 | --- | --- | --- |
 | 初期化・Config Preflight | 型、キー、リスト形式、重複、出力キーコードの検証。失敗時はウィンドウアニメーションの設定も変更しない | [init_test.lua](../tests/init_test.lua)、[config_validation_test.lua](../tests/config_validation_test.lua) |
 | Hotkey Registry | 修飾キーの別名や重複表記の正規化、`fn` の拒否、登録失敗時の `id` を含むエラー | [hotkey_registry_test.lua](../tests/hotkey_registry_test.lua) |
-| Input Remap・Control Layer | HID 変換の解除、Command 単体押しと組み合わせ操作、マウスイベントでキーコードを取得しないこと、繰り返し入力 | [input_remap_test.lua](../tests/input_remap_test.lua) |
+| Input Remap・Control Layer | HID 変換の解除、Command 単体押しと組み合わせ操作、Command 押下中だけ keyDown を監視すること、マウスイベントでキーコードを取得しないこと、繰り返し入力 | [input_remap_test.lua](../tests/input_remap_test.lua) |
 | App Switcher | 起動、非表示、Space の優先、巡回・再表示、Finder の非 standard window とデスクトップの区別、補助要素の除外、Space 取得失敗時の誤移動防止。候補が1つでも所属 Space を確認し、並べ替えで元の一覧を変更しない | [app_switcher_test.lua](../tests/app_switcher_test.lua) |
 | アプリごとの制御 | 最前面アプリに応じた Hotkey の有効化と入力ソースの切り替え | [app_hotkey_blocker_test.lua](../tests/app_hotkey_blocker_test.lua)、[app_input_source_test.lua](../tests/app_input_source_test.lua) |
 | Unicode Converter | 長いコードポイントの整数オーバーフロー防止、通知を省略するときの UTF-8 境界 | [unicode_converter_test.lua](../tests/unicode_converter_test.lua) |
@@ -52,6 +52,7 @@ git diff --check
 - [ ] Ctrl / Alt / Shift / Fn のいずれかを先に押し、Command を押して離しても入力が切り替わらず、その後の単体押しでは通常どおり切り替わる。
 - [ ] 左右 Command を同時に押して離しても入力が切り替わらず、その後の左右それぞれの単体押しが動作する。
 - [ ] Command を押したまま再読み込みし、すべての Command を離すまでは入力が切り替わらず、その後の単体押しが動作する。
+- [ ] しばらく操作しなかった後に Command を押さずに打ち始めても、最初の打鍵が遅れない。
 
 ### Control Layer・App Hotkey Blocker
 

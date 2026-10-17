@@ -32,7 +32,7 @@ test.test("Command key は mouse event から key code を取得しない", func
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
   local mouse = fakeHs.event(types.leftMouseDown)
   function mouse:getKeyCode() error("mouse event has no key code") end
-  tap.callback(mouse)
+  state.eventtaps[2].callback(mouse)
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, {}))
   test.equal(0, #state.keyStrokes)
 end)
@@ -144,7 +144,7 @@ test.test("Command key は単体押しだけを入力切替に変換する", fun
 
   state.keyStrokes = {}
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
-  tap.callback(fakeHs.event(types.keyDown, 0, { cmd = true }))
+  state.eventtaps[2].callback(fakeHs.event(types.keyDown, 0, { cmd = true }))
   tap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = false }))
 
   test.equal(0, #state.keyStrokes)
@@ -154,6 +154,39 @@ test.test("Command key は単体押しだけを入力切替に変換する", fun
 
   test.equal(1, #state.keyStrokes)
   test.equal(0x68, state.keyStrokes[1].key)
+end)
+
+test.test("Command key は通常の打鍵を Command 押下中以外は監視しない", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.command_keys")
+
+  require("modules.command_keys").bind({
+    bindings = {
+      { commandKey = "cmd", outputKeyCode = 0x66 },
+      { commandKey = "rightcmd", outputKeyCode = 0x68 },
+    },
+  })
+
+  local types = hs.eventtap.event.types
+  local flagsTap, chordTap = state.eventtaps[1], state.eventtaps[2]
+  test.equal(1, #flagsTap.watchedTypes)
+  test.equal(types.flagsChanged, flagsTap.watchedTypes[1])
+  test.equal(true, flagsTap.started)
+  test.equal(false, chordTap.started)
+
+  flagsTap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+  test.equal(true, chordTap.started)
+  flagsTap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.rightcmd, { cmd = true }))
+  flagsTap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true }))
+  test.equal(true, chordTap.started)
+  flagsTap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.rightcmd, { cmd = false }))
+  test.equal(false, chordTap.started)
+
+  flagsTap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { cmd = true, ctrl = true }))
+  test.equal(true, chordTap.started)
+  flagsTap.callback(fakeHs.event(types.flagsChanged, hs.keycodes.map.cmd, { ctrl = true }))
+  test.equal(false, chordTap.started)
 end)
 
 test.test("Command key は左右同時押しを chord として扱い単体押しへ復旧する", function()
