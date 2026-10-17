@@ -1,19 +1,9 @@
 local test = require("tests.test_helper")
 local fakeHs = require("tests.support.fake_hs")
 
-local function resetTimerModules()
-  test.resetModule("modules.app_switcher")
-  test.resetModule("modules.bindings")
-  test.resetModule("modules.hotkey_registry")
-  test.resetModule("modules.timer")
-  test.resetModule("modules.unicode_converter")
-end
-
 local function setup()
-  local hs, state = fakeHs.new()
+  local hs, state = fakeHs.install()
   state.now = 1000
-  _G.hs = hs
-  resetTimerModules()
   return hs, state
 end
 
@@ -56,49 +46,6 @@ local function startFromQuery(state, query)
   chooser.callback(chooser.currentChoices[1])
   return chooser
 end
-
-test.test("Timer は enabled 設定で Hotkey 登録を切り替える", function()
-  local hs, state = setup()
-  local registry = require("modules.hotkey_registry").new()
-  require("modules.bindings").bind({
-    timer = { enabled = false },
-  }, registry)
-
-  test.equal(0, #state.hotkeys)
-
-  hs, state = setup()
-  registry = require("modules.hotkey_registry").new()
-  local binding = { enabled = true }
-  require("modules.bindings").bind({
-    timer = binding,
-  }, registry)
-
-  test.equal(1, #state.hotkeys)
-  test.equal("`", state.hotkeys[1].key)
-  test.equal(1, #state.hotkeys[1].mods)
-  test.equal("ctrl", state.hotkeys[1].mods[1])
-  test.equal(nil, binding.id)
-  test.equal(nil, binding.mods)
-  test.equal(nil, binding.key)
-  state.hotkeys[1].pressedFn()
-  test.equal(true, state.choosers[1].visible)
-end)
-
-test.test("Timer は明示した mods と key を既定より優先する", function()
-  local _, state = setup()
-  local registry = require("modules.hotkey_registry").new()
-  require("modules.bindings").bind({
-    timer = {
-      enabled = true,
-      mods = { "cmd" },
-      key = "b",
-    },
-  }, registry)
-
-  test.equal("b", state.hotkeys[1].key)
-  test.equal(1, #state.hotkeys[1].mods)
-  test.equal("cmd", state.hotkeys[1].mods[1])
-end)
 
 test.test("Timer は開くと分の入力範囲を示して開始行を出さない", function()
   local _, state = setup()
@@ -247,7 +194,6 @@ test.test("Timer は1秒の countdown を 0:01 のまま完了し無期限 alert
   test.equal(true, menubar.deleted)
   test.equal(nil, activeMenubar(state))
   test.equal("0:01", menubar.title)
-  test.equal(0, #state.notifications)
   test.equal(1, #state.alerts)
   test.equal("1秒が経過しました", state.alerts[1])
   test.equal("indefinite", state.alertDetails[1].arguments[1])
@@ -384,4 +330,19 @@ test.test("Timer は期限を過ぎた壁時計で完了する", function()
 
   test.equal(nil, activeMenubar(state))
   test.equal("5分が経過しました", state.alerts[1])
+end)
+
+test.test("Timer は実行中だけ残り時間を返し、cancel で止める", function()
+  local _, state = setup()
+  local timer = require("modules.timer")
+  test.equal(nil, timer.remainingText())
+
+  startFromQuery(state, "10")
+  state.now = state.now + 61
+  test.equal("8:59", timer.remainingText())
+
+  timer.cancel()
+  test.equal(nil, timer.remainingText())
+  test.equal(nil, activeMenubar(state))
+  test.equal(0, #state.alerts)
 end)

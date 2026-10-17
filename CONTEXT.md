@@ -1,49 +1,57 @@
 # Hammerspoon Config
 
-この context は、macOS 上で動く Hammerspoon 設定の操作語彙を定義する。shortcut 登録と低レベル入力変換を区別し、設定の意図を読みやすく保つために存在する。
+この context は、macOS 上で動く Hammerspoon 設定の操作語彙を定義する。Hotkey と低レベルの入力変換を区別し、設定の意図を読みやすく保つために存在する。
 
 ## Language
 
 **Hotkey**:
-Hammerspoon に登録される、修飾キーと通常キーの組み合わせ。常時有効にするものと、条件に応じて有効状態を切り替えるものを含む。
-_Avoid_: Shortcut, keybinding
+`config.hotkeys` の1項目。Chord と動作を1つずつ持ち、Hammerspoon に登録される。有効な範囲を持つものは、最前面アプリに応じて有効・無効を切り替える。
+_Avoid_: Shortcut, keybinding, Desired Hotkey
 
-**Hotkey Registry**:
-有効な Hotkey を検証し、重複を検出して登録する入口。Hotkey が実行する feature の挙動は所有しない。
-_Avoid_: Shortcut manager, keybinding manager
+**Chord**:
+`"ctrl+shift+u"` のように修飾キーとキーを `+` でつないだ表記。Hotkey の組み合わせと `send` の送り先の両方に使う。画面には `⌃⇧U` のような記号で表示する。
+_Avoid_: Key combo, shortcut string
 
 **Hotkey Identity**:
-Hotkey の重複判定に使う、正規化された `mods + key` の組み合わせ。`mods` の並び順が違っても同じ組み合わせなら同じ Hotkey Identity とみなす。
+Hotkey の重複判定に使う、正規化した Chord（例: `shift+cmd+u`）。修飾キーの別名・並び順・大文字小文字が違っても同じ組み合わせなら同じ Hotkey Identity とみなす。
 _Avoid_: Binding key, shortcut id
 
-**Desired Hotkey**:
-`init.lua` に宣言される、登録したい Hotkey の設定。Hotkey Registry が検証と登録を行う前の意図を表す。
-_Avoid_: Hotkey config, shortcut setting
+**Action**:
+Hotkey が押されたときの動作。`send`（キー入力を送る）、`app`（App Switcher）、`run`（Command または関数）、`block`（何もしない）の4種類。
+_Avoid_: Handler, callback
 
-**Control Layer**:
-Desired Hotkey を、別キーまたは修飾付きキーの入力として送る feature。組み合わせと送り先は `init.lua` の設定が表す。
-_Avoid_: Input Remap, App Hotkey Blocker, emacs layer
+**Scope**:
+Hotkey が有効な範囲。`only` は指定したアプリが最前面の間だけ、`except` は指定したアプリが最前面の間を除いて有効にする。範囲が重ならなければ、同じ Hotkey Identity をアプリごとに使い分けられる。
+_Avoid_: Context, condition, App Hotkey Blocker
 
-**App Hotkey Blocker**:
-対象 app が frontmost の間だけ Hotkey を有効にし、app 本来の操作を無効化する feature。対象 app と Hotkey の選択は `init.lua` の設定が表す。
-_Avoid_: Global Hotkey, Input Remap
+**Command**:
+`run` で名前を指定して呼べる組み込みの動作（`palette`、`timer`、`reload`、`console`、`remap-off`）。コマンドパレットにも並ぶ。
+_Avoid_: Action（Hotkey の動作の種類を指す）
 
-**App Input Source**:
-対象 app が frontmost になったとき、指定した入力ソースへ切り替える feature。対象 app と入力ソースの選択は `init.lua` の設定が表す。
-_Avoid_: IME switcher, input method watcher
+**Command Palette**:
+登録済みの Hotkey と Command を一覧し、選んで実行する画面。一覧は設定から作るため、Hotkey の早見表を兼ねる。
+_Avoid_: Launcher, cheat sheet
 
-**Input Source**:
-英数またはかな。App Input Source が切り替える先。
-_Avoid_: layout, input method, keyboard layout
+**Config Preflight**:
+副作用を起こす前に `config.lua` 全体を検証し、問題を項目の場所とともにまとめて返す処理。設定データは変更せず、アプリの存在などの環境は調べない。
+_Avoid_: Validation step, lint
 
-**App Switcher**:
-Desired Hotkey に対応する macOS app を起動、focus、hide、または window cycle する feature。window cycle は各 display で現在表示中の Space を優先し、対象 window がないと確認できた場合だけ全 Space を対象にする。Space の取得失敗は window がない場合と区別する。対象 app と Hotkey の選択は `init.lua` の設定が表す。
-_Avoid_: App launcher
+**Safe Reload**:
+`config.lua` の保存を監視し、Config Preflight に通った場合だけ再読み込みする仕組み。通らなければ今の状態を保ったまま問題を表示する。
+_Avoid_: Auto reload, hot reload
 
 **Input Remap**:
-物理キーや低レベル入力イベントを別の入力に変換する設定。`eventtap` や `hidutil` に寄るものを含み、Hotkey とは別に扱う。
+物理キーを別のキーとして OS に認識させる設定（`config.remap`）。hidutil の `UserKeyMapping` を使い、Hotkey より手前で働く。
 _Avoid_: Hotkey, shortcut
 
+**App Switcher**:
+`app` の動作。macOS アプリを起動、focus、hide、または window cycle する。window cycle は各 display で現在表示中の Space を優先し、対象 window がないと確認できた場合だけ全 Space を対象にする。Space の取得失敗は window がない場合と区別する。
+_Avoid_: App launcher
+
+**Input Source**:
+英数またはかな。`config.inputSource` で、アプリが最前面になったときの切り替え先を指定する。
+_Avoid_: layout, input method, keyboard layout
+
 **Timer**:
-Desired Hotkey から開始する、同時に1本だけの one-shot countdown。
+`timer` Command から開始する、同時に1本だけの one-shot countdown。
 _Avoid_: Pomodoro, alarm, reminder

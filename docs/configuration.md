@@ -1,85 +1,128 @@
 # 設定ガイド
 
-[init.lua](../init.lua) の `config` を編集します。ここに記載する初期設定を変更済みの場合は、実際の `config` を読み替えてください。導入、設定の反映、操作を戻す手順は [README](../README.md) にあります。
+設定は [config.lua](../config.lua) に書きます。`config.lua` は設定のテーブルを `return` し、`remap`、`hotkeys`、`inputSource` の3項目を持ちます。どれも省略できます。導入と操作を戻す手順は [README](../README.md) にあります。
 
-## 共通ルール
+```lua
+return {
+  remap = { caps_lock = "left_control" },
+  hotkeys = {
+    { "ctrl+m", app = "Typora" },
+  },
+  inputSource = { eisu = { "Zed" } },
+}
+```
 
-Hotkey の設定では `mods` と `key` を指定します。`mods` は `{ "ctrl" }` のように明示し、修飾キーが不要な場合は `{}` にします。省略時の値は機能ごとに異なります。`id` は省略でき、各機能が設定から補います。
+## 保存と再読み込み
 
-- 修飾キーには `ctrl`、`alt`、`shift`、`cmd` を使います。`control`、`option`、`command` も使えます。
-- `fn` はこの設定の Hotkey では使用できません。Control Layer の送り先の `to.mods` には使えます。
-- 有効な Hotkey どうしで、正規化した `mods + key`（Hotkey Identity）を重複させないでください。修飾キーの並び順、別名、重複表記を変えても同じ組み合わせとして扱います。
-- `id` は無効な設定も含めて重複できません。自動で補われる `id` が重複する場合は、別の `id` を明示します。
-- `bindings`、`mappings`、アプリのリスト、`mods` は `{ ... }` で順に並べます。辞書形式や途中の番号が抜けたリストは使えません。
+`config.lua` を保存すると、Config Preflight で設定全体を検証します。
 
-`enabled` を省略すると有効です。無効にする位置は機能ごとに異なります。
+- 問題がなければ再読み込みし、「設定を再読み込みしました（Hotkey ○ 件）」と表示します。
+- 問題があれば再読み込みせず、今の設定のまま問題の一覧を表示します。一覧は画面をクリックすると消え、全文は Hammerspoon Console に残ります。
+- 内容が変わっていない保存では何もしません。
+- 起動時に設定に問題があった場合は何も適用しません。直して保存すれば、そのまま適用されます。
 
-| 無効にする対象 | `enabled = false` を指定する位置 |
+問題は `hotkeys[3].app: 空でない文字列を指定してください` のように、項目の場所とともにまとめて表示します。打ち間違いと思われる名前には `（もしかして only）` のように候補を添えます。検証は設定データを変更せず、アプリがインストール済みかどうかは調べません。
+
+自動で再読み込みするのは `config.lua` の保存だけです。`modules/` や `init.lua` を変えた場合は、コマンドパレットの「設定を再読み込み」か、Hammerspoon のメニューの **Reload Config** を使います。パレットからの再読み込みも、先に設定と読み込み済みモジュールの構文を検証します。
+
+## remap（物理キーの変換）
+
+`物理キー = "変換後のキー"` の形で書きます。hidutil の `UserKeyMapping` として OS に設定するため、Hammerspoon の Hotkey より手前で変換されます。
+
+```lua
+remap = {
+  caps_lock = "left_control",
+  left_control = "left_command",
+  left_command = "eisu",
+  right_command = "kana",
+},
+```
+
+- 使えるキー: `caps_lock`、`escape`、`tab`、`space`、`return`、`delete`（後方削除）、`forwarddelete`、`left_control`、`left_shift`、`left_option`、`left_command`、`right_control`、`right_shift`、`right_option`、`right_command`、`eisu`（英数キー）、`kana`（かなキー）。
+- 変換は連鎖しません。上の例では物理 `caps_lock` は `left_control` になり、`left_command` にはなりません。
+- `remap = {}` にすると変換を解除します。`remap` 自体を書かなければ、hidutil の設定に触りません。
+
+初期設定では左右 Command を英数・かなキーとして使い、Command は物理 `left_control` で押します。
+
+## hotkeys（Hotkey と動作）
+
+1項目に1つの Hotkey を書きます。先頭に Chord（`"ctrl+i"` のようなキーの組み合わせ）、続けて動作を1つ指定します。
+
+```lua
+hotkeys = {
+  { "ctrl+i", send = "up" },
+  { "f5", send = "cmd+r", once = true },
+  { "ctrl+m", app = "Typora" },
+  { "cmd+d", block = true, only = "Google Chrome" },
+  { "ctrl+p", run = "timer" },
+  { "ctrl+;", run = "palette" },
+},
+```
+
+### Chord の書き方
+
+- 修飾キーとキーを `+` でつなぎます。修飾キーは `ctrl`、`alt`、`shift`、`cmd` で、`control`、`option`、`opt`、`command`、`⌃`、`⌥`、`⇧`、`⌘` も使えます。大文字小文字と並び順は問いません。
+- 修飾キーなしでも書けます（例: `"f5"`）。
+- キー名は Hammerspoon の `hs.keycodes.map` の名前です。例: `a`〜`z`、`0`〜`9`、`;`、`` ` ``、`f1` などのファンクションキー、`up` `down` `left` `right`、`delete`（後方削除）、`forwarddelete`、`return`、`escape`、`tab`、`space`、`home`、`end`、`pageup`、`pagedown`。
+- `fn` は Hotkey には使えません。`send` の送り先には使えます。
+
+### 動作
+
+| 動作 | 例 | 内容 |
+| --- | --- | --- |
+| `send` | `send = "cmd+r"` | 最前面のアプリへキー入力を送る。長押しで繰り返す。`once = true` なら繰り返さない |
+| `app` | `app = "Typora"` | App Switcher。アプリを起動・フォーカス・非表示・ウィンドウ切り替えする |
+| `run` | `run = "timer"` | 組み込みの Command、または Lua の関数を実行する |
+| `block` | `block = true` | 何もしない。アプリ本来のショートカットを無効にするときに `only` と組み合わせる |
+
+`run` に指定できる Command は次のとおりです。関数を渡すこともでき、失敗したときは `label` の名前とともにエラーを表示します。
+
+| Command | 内容 |
 | --- | --- |
-| Input Remap | `config.hidRemap` |
-| Command キーの単体押し | `config.commandKeys` |
-| Control Layer | `config.controlLayer.bindings` の対象項目 |
-| App Hotkey Blocker / App Switcher | 各リストの対象項目 |
-| App Input Source | `config.appInputSources`、またはその `bindings` の対象項目 |
-| Unicode Converter / Timer | `config.unicodeConverter` / `config.timer` |
+| `palette` | コマンドパレットを開く |
+| `timer` | タイマーの入力画面を開く |
+| `reload` | 設定を検証して再読み込みする |
+| `console` | Hammerspoon Console を開く |
+| `remap-off` | キー変換を一時的に解除する（再読み込みで戻る） |
 
-無効な設定も形式の検証対象です。削除する場合は、リストの対象項目を取り除きます。
+### 有効な範囲（only / except）
 
-## Input Remap
-
-`config.hidRemap.mappings` に、物理キーの変換元 `from` と変換先 `to` を指定します。使えるキーは `caps_lock`、`left_control`、`left_command`、`right_command`、`eisu`（英数キー）、`kana`（かなキー）です。同じ `from` を二重には指定できません。
+`only` を付けると、そのアプリが最前面の間だけ有効になります。`except` を付けると、そのアプリが最前面の間は無効になり、アプリ本来の操作が動きます。アプリ名1つか、アプリ名のリストを指定します。
 
 ```lua
-{ from = "caps_lock", to = "left_control" },
+{ "cmd+d", block = true, only = "Google Chrome" },
+{ "ctrl+d", send = "forwarddelete", except = { "cmux", "Terminal" } },
 ```
 
-初期設定は `caps_lock` → `left_control`、`left_control` → `left_command`、`left_command` → `eisu`、`right_command` → `kana` です。左右 Command キーを押すと、英数・かなキーと同じように入力ソースが切り替わります。Command として使うのは物理 `left_control` です。`config.hidRemap.enabled = false` にして再読み込みすると、`UserKeyMapping` を空にして変換を解除します。
+アプリ名は最前面アプリの表示名と比べます。Chrome Beta のように別名のアプリには、その名前を書きます。
 
-## Command キーの単体押し
+### 重複
 
-`config.commandKeys.bindings` に対象の Command キーと送信するキーコードを指定します。
+同じ組み合わせ（Hotkey Identity）は二重に書けません。`"Command+Shift+U"` と `"shift+cmd+u"` のように表記が違っても同じとみなします。ただし、`only` / `except` で有効な範囲が重ならなければ、同じ組み合わせをアプリごとに使い分けられます。
 
 ```lua
-{ commandKey = "cmd", outputKeyCode = 0x66 },
-{ commandKey = "rightcmd", outputKeyCode = 0x68 },
+{ "ctrl+r", app = "Zed", except = "Google Chrome" },
+{ "ctrl+r", send = "cmd+r", only = "Google Chrome" },
 ```
 
-`commandKey` は `cmd` / `rightcmd`、`outputKeyCode` は 0〜65535 の整数です。同じ `commandKey` を二重には指定できません。初期設定は JIS キーボードの英数・かなです。ほかのキーと組み合わせた場合は、単体押しの入力切り替えを行いません。
+### 表示名
 
-この機能はすべての打鍵を eventtap で監視するため、しばらく操作しなかった後の打ち始めが遅れることがあります。初期設定では `enabled = false` にして、代わりに `config.hidRemap` で左右 Command を英数・かなキーへ変換しています。有効にする場合は、`config.hidRemap` から `left_command` と `right_command` の変換を外してください。
+コマンドパレットに出る名前は動作から決まります（例: 「↑ を送る」「Typora に切り替え」）。`label = "エディタ"` で変えられます。
 
-## Control Layer
+## inputSource（アプリごとの入力ソース）
 
-`config.controlLayer.bindings` に、Hotkey と送り先の `to` を指定します。
+アプリが最前面になったとき、英数・かなキーを送って入力ソースを切り替えます。設定の読み込み時にすでに最前面だった場合も切り替えます。
 
 ```lua
-{ mods = { "ctrl" }, key = "h", to = "delete" },
-{ mods = {}, key = "F5", to = { mods = { "cmd" }, key = "r" }, repeatable = false },
+inputSource = {
+  eisu = { "Zed", "cmux", "Visual Studio Code" },
+  kana = { "Typora" },
+},
 ```
 
-`to` はキー名、または `mods` と `key` を持つテーブルです。後方削除は `delete`、前方削除は `forwarddelete` です。長押しを繰り返し入力にしない場合は `repeatable = false` を指定します。`id` は省略時に `to` から補います。
+同じアプリを両方に書くことはできません。どちらにもないアプリでは入力ソースを変更しません。
 
-初期設定は `ctrl+i/j/k/l` で矢印、`ctrl+h/d` で後方・前方削除、`F5` で `cmd+r` の送信です。
-
-## App Hotkey Blocker
-
-`config.appHotkeyBlockers` はアプリごとの設定を並べたリストです。対象アプリが最前面の間だけ、その Hotkey でアプリ本来の操作を無効にします。
-
-```lua
-{ appName = "Google Chrome", mods = { "cmd" }, key = "d" },
-```
-
-`appName` は実際のアプリ名に合わせます。Chrome Beta など、別名のアプリでは変更が必要です。
-
-## App Switcher
-
-`config.appSwitchers` に対象アプリの `appName` と Hotkey を指定します。
-
-```lua
-{ appName = "Zed", mods = { "ctrl" }, key = "r" },
-```
-
-対象を変えるときは `appName`、割り当てを変えるときは `mods` と `key` を編集します。追加する場合は既存の Hotkey と重複させないでください。
+## App Switcher（app）
 
 - 未起動ならアプリを起動します。
 - ウィンドウがなければ、アプリに再表示を要求します。Finder が最前面でデスクトップだけが表示されている場合も対象です。
@@ -92,36 +135,18 @@ ID が無効な要素や補助パネルは候補から外します。Space の�
 
 Space 情報の取得そのものが失敗した場合は、現在の Space にあると確認できた候補だけを使います。その候補もない場合や、どの候補にも所属 Space がない場合は切り替えず、もう一度 Hotkey を押すよう案内します。
 
-## App Input Source
-
-`config.appInputSources.bindings` に対象アプリと入力ソースを指定します。
-
-```lua
-{ appName = "Zed", source = "eisu" },
-```
-
-`source` は `eisu`（英数）または `kana`（かな）です。対象アプリが最前面になったときと、設定の読み込み時にすでに最前面だった場合に切り替えます。初期設定の対象は Zed、cmux、Visual Studio Code で、いずれも英数です。対象外のアプリでは入力ソースを変更しません。
-
-## Unicode Converter
-
-初期設定では無効です。`config.unicodeConverter.enabled = true` にすると、`cmd+shift+u` で変換画面を開きます。割り当ては `mods` と `key` で変更できます。
-
-文字とコードポイントを相互変換します。例は `あ` ↔ `U+3042` で、コードポイントは `U+3042`、`0x3042`、`3042` の形式を受け付けます。
-
-## Timer
-
-初期設定は `ctrl+p` で入力画面を開きます。割り当ては `config.timer.mods` と `key` で変更できます。
+## タイマー（run = "timer"）
 
 - 数値を入力して Enter で開始します。既定の単位は分（1〜180）です。
 - `Tab` で数値を保ったまま秒（1〜10800）と分を切り替えます。`s` / `m` でも切り替えられ、数字とこれらの文字以外は受け付けません。
-- メニューバーに残り時間を表示します。クリックして「キャンセル」を選ぶと停止します。
-- 同時に動く Timer は1本です。新しく開始すると前の Timer を置き換え、**Reload Config** でも実行中の Timer は破棄されます。
-- 完了時は `Tink` を音量設定 `0.25` で1回再生し、経過時間を表示します。表示は画面をクリックするまで残ります。
+- メニューバーに残り時間を表示します。メニューの「キャンセル」か、コマンドパレットの「タイマーを停止」で止めます。
+- 同時に動くタイマーは1本です。新しく開始すると前のタイマーを置き換え、再読み込みすると実行中のタイマーは破棄されます。
+- 完了時は `Tink` を音量 `0.25` で1回鳴らし、経過時間を表示します。表示は画面をクリックするまで残ります。
 
-## Config Preflight でエラーになったとき
+## コマンドパレット（run = "palette"）
 
-設定全体の検証は Hotkey の登録や入力変換の開始前に行います。不備は `invalid Hammerspoon config:` の下に、`config...` の項目名とともにまとめて表示されます。
+`config.lua` の Hotkey と組み込みの Command を一覧します。各行には `⌃M` や `⌘D · Google Chrome のみ` のように Hotkey と有効な範囲を表示するため、早見表として使えます。名前や説明（アプリ名など）で絞り込み、Enter で実行します。
 
-`duplicates Hotkey Identity` は有効な割り当ての重複です。置き換えが目的なら、項目を追加せず元の項目を編集します。`id` の重複や不正な値も、表示された項目を修正してください。検証は設定データを変更せず、対象アプリがインストール済みかどうかは調べません。
-
-修正後は [変更を反映する](../README.md#変更を反映する) に沿って再確認します。
+- Hotkey のない Command（「設定を再読み込み」など）も並びます。
+- タイマーの実行中は「タイマーを停止」と残り時間が並びます。
+- 選んだ動作は、パレットが閉じて元のアプリへフォーカスが戻ってから実行します。
