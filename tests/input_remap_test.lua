@@ -61,6 +61,25 @@ test.test("HID mapping は現在の modifier remap を hidutil に適用する",
   test.equal(0x7000000E3, mappings[2].HIDKeyboardModifierMappingDst)
 end)
 
+test.test("HID mapping は Command を英数・かなキーへ変換できる", function()
+  local hs, state = fakeHs.new()
+  _G.hs = hs
+  test.resetModule("modules.hid_remap")
+
+  require("modules.hid_remap").apply({
+    mappings = {
+      { from = "left_command", to = "eisu" },
+      { from = "right_command", to = "kana" },
+    },
+  })
+
+  local mappings = state.jsonValues[1].UserKeyMapping
+  test.equal(0x7000000E3, mappings[1].HIDKeyboardModifierMappingSrc)
+  test.equal(0x700000091, mappings[1].HIDKeyboardModifierMappingDst)
+  test.equal(0x7000000E7, mappings[2].HIDKeyboardModifierMappingSrc)
+  test.equal(0x700000090, mappings[2].HIDKeyboardModifierMappingDst)
+end)
+
 test.test("HID mapping は無効化時に残存する modifier remap を解除する", function()
   local hs, state = fakeHs.new()
   _G.hs = hs

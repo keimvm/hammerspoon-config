@@ -42,16 +42,19 @@ git diff --check
 
 ### Input Remap・Command キー
 
-- [ ] `hidutil property --get 'UserKeyMapping'` に `caps_lock` → `left_control` と `left_control` → `left_command` の2つの変換がある。
+- [ ] `hidutil property --get 'UserKeyMapping'` に `caps_lock` → `left_control`、`left_control` → `left_command`、`left_command` → `eisu`、`right_command` → `kana` の4つの変換がある。
 - [ ] `config.hidRemap.enabled = false` にして再読み込みすると `UserKeyMapping` が空になり、元へ戻して再読み込みすると変換が復旧する。
 - [ ] 物理 `caps_lock+i/j/k/l` がそれぞれ `up/left/down/right` として動き、長押しで繰り返し入力になる。
 - [ ] 物理 `caps_lock+h/d` が後方削除・前方削除として動き、長押しで繰り返し入力になる。
 - [ ] 物理 `left_control` を Command キーとして使える。
-- [ ] 左 Command の単体押しで英数、右 Command の単体押しでかなに切り替わる。
-- [ ] Command をほかのキーと組み合わせて使った場合、単体押しの入力切り替えが発火しない。
-- [ ] Ctrl / Alt / Shift / Fn のいずれかを先に押し、Command を押して離しても入力が切り替わらず、その後の単体押しでは通常どおり切り替わる。
-- [ ] 左右 Command を同時に押して離しても入力が切り替わらず、その後の左右それぞれの単体押しが動作する。
-- [ ] Command を押したまま再読み込みし、すべての Command を離すまでは入力が切り替わらず、その後の単体押しが動作する。
+- [ ] 物理の左 Command で英数、右 Command でかなに切り替わる。
+- [ ] しばらく操作しなかった後に打ち始めても、最初の打鍵が遅れない。
+- [ ] `config.commandKeys.enabled = true` にして `config.hidRemap` から Command の変換を外した場合は、次も確認する。
+  - [ ] 左 Command の単体押しで英数、右 Command の単体押しでかなに切り替わる。
+  - [ ] Command をほかのキーと組み合わせて使った場合、単体押しの入力切り替えが発火しない。
+  - [ ] Ctrl / Alt / Shift / Fn のいずれかを先に押し、Command を押して離しても入力が切り替わらず、その後の単体押しでは通常どおり切り替わる。
+  - [ ] 左右 Command を同時に押して離しても入力が切り替わらず、その後の左右それぞれの単体押しが動作する。
+  - [ ] Command を押したまま再読み込みし、すべての Command を離すまでは入力が切り替わらず、その後の単体押しが動作する。
 
 ### Control Layer・App Hotkey Blocker
 
