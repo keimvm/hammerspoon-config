@@ -5,7 +5,7 @@
 ## 原則
 
 - **入力操作を壊さない。** 設定に問題があれば何も適用せず、一部だけが適用された状態を作らない。副作用より前に Config Preflight を行い、問題は項目の場所とともにまとめて報告する。
-- **入力遅延を生まない。** keyDown を常時監視する eventtap は使わず、物理キーの変換は hidutil に任せる。常駐させてよい eventtap は、クリックで閉じる表示のためにマウスの押下だけを見るものに限る。
+- **入力遅延を生まない。** keyDown を常時監視する eventtap は使わず、物理キーの変換は hidutil に任せる。常駐させてよい eventtap はマウスのクリックだけを見るものに限る（クリックで閉じる表示と、Dock Toggle の左クリックの押下・離し）。
 - **設定と実装を分ける。** 設定は `config.lua` の1か所にまとめ、適用の順序は `init.lua` に明示する。
 - **自動検証と実機確認を分ける。** 自動検証が通っても実機確認の代わりにはならない。報告でも区別する。
 - **必要になるまで抽象化しない。** 使っていない機能や設定項目は残さない。
@@ -26,6 +26,7 @@
 | `modules/app_switcher.lua` | App Switcher |
 | `modules/input_source.lua` | アプリごとの Input Source の切り替え |
 | `modules/frontmost.lua` | 最前面アプリの変化を各機能へ知らせる |
+| `modules/dock_toggle.lua` | Dock Toggle |
 | `modules/palette.lua` | コマンドパレット |
 | `modules/timer.lua` | タイマー |
 | `modules/ui.lua` | 通知と chooser の見た目と振る舞い |
@@ -39,7 +40,7 @@
 1. `preflight.load` で `config.lua` を読み込み、設定全体を検証する。
 2. `reloader.watch` で `config.lua` の監視を始める。検証に失敗した場合もここまでは行い、直して保存すれば復旧できるようにする。
 3. 検証に失敗していれば、問題を表示して終える。
-4. `remap.apply`、`hotkeys.start`、`inputSource.start`、`frontmost.start`、`palette.use` の順に適用する。`frontmost.start` は開始時に現在の最前面アプリを知らせるため、購読する機能（Scope つきの Hotkey と Input Source）より後に呼ぶ。
+4. `remap.apply`、`hotkeys.start`、`inputSource.start`、`frontmost.start`、`dockToggle.start`、`palette.use` の順に適用する。`frontmost.start` は開始時に現在の最前面アプリを知らせるため、購読する機能（Scope つきの Hotkey と Input Source）より後に呼ぶ。
 5. 登録できなかった Hotkey があれば報告する。Safe Reload による再読み込みだった場合は、完了を表示する。
 
 ### 機能を足すとき
@@ -65,6 +66,12 @@
   - 候補は Hammerspoon の標準 window filter と同じ subrole に限る。これで補助パネルや Finder のデスクトップを除く。
   - Space の所属一覧が空の要素（非表示タブなど）は候補から外す。これは Space 情報の取得失敗とは区別し、取得に失敗した場合は別の Space へ移動しない。
   - ウィンドウ一覧が空でも、メインウィンドウとフォーカス中のウィンドウを確かめてから再表示を要求する。別 Space のウィンドウが一覧に出ないアプリがあるため。
+- **Dock Toggle は隠すクリックだけを扱う。** macOS の Dock には最前面アプリを隠す設定がないため、eventtap で左クリックを見る。表示と再表示は Dock 本来の動きに任せる。
+  - クリック先は Dock のアプリ要素の `elementAtPosition` で調べ、`systemElementAtPosition` は使わない。後者はカーソルの下のアプリに問い合わせるため、そのアプリが応答しないとすべてのクリックが遅れる。
+  - クリック判定中の AX 問い合わせには、それぞれ 0.05 秒の上限を付ける。上限は要素ごとに設定する必要があるため、Dock・アイコン・最前面アプリ・フォーカス中のウィンドウの各要素に設定し、ウィンドウ判定も AX 属性で行う。上限の設定や属性の取得に失敗したら、クリックを止めず Dock 本来の動きに任せる。Dock だけへの設定では、最前面アプリが応答しない場合の待ち時間を制限できないため。
+  - アプリは Dock 項目の `AXURL`（バンドルのパス）で見分ける。Visual Studio Code のように、Dock の表示名とアプリ名（`Code`）が違うアプリがあるため。
+  - 隠すと決めたクリックは、押下と離しの両方を止める。押下だけを止めると Dock が押されたままになり、離しだけを止めると長押しのメニューが出る。そのため、最前面アプリのアイコンでは長押しのメニューとドラッグでの並べ替えが使えない。
+  - ウィンドウがない、または最小化中のときは隠さず、Dock 本来の動き（新しいウィンドウを開く、元に戻す）に任せる。App Switcher の「今のウィンドウが最前面なら隠す」と判断をそろえるため。
 
 ### 持たない機能
 

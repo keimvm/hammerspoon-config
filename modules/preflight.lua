@@ -1,5 +1,6 @@
 -- Config Preflight。副作用を起こす前に設定全体を検証し、問題をまとめて返す。
 -- 設定データは変更せず、アプリがインストール済みかどうかは調べない。
+local dockToggle = require("modules.dock_toggle")
 local hotkeys = require("modules.hotkeys")
 local inputSource = require("modules.input_source")
 local remap = require("modules.remap")
@@ -7,7 +8,7 @@ local report = require("modules.report")
 
 local M = {}
 
-local SECTIONS = { "remap", "hotkeys", "inputSource" }
+local SECTIONS = { "remap", "hotkeys", "inputSource", "dockToggle" }
 
 function M.check(config)
   local root = report.new()
@@ -20,6 +21,7 @@ function M.check(config)
   remap.validate(config.remap, root:at("remap"))
   hotkeys.validate(config.hotkeys, root:at("hotkeys"))
   inputSource.validate(config.inputSource, root:at("inputSource"))
+  dockToggle.validate(config.dockToggle, root:at("dockToggle"))
   return root.problems
 end
 

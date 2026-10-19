@@ -52,6 +52,10 @@ _Avoid_: App launcher
 英数またはかな。`config.inputSource` で、アプリが最前面になったときの切り替え先を指定する。
 _Avoid_: layout, input method, keyboard layout
 
+**Dock Toggle**:
+`config.dockToggle` で有効にする動作。最前面アプリの Dock アイコンをクリックすると、そのアプリを hide する。表示と再表示は Dock 本来の動きに任せる。
+_Avoid_: Dock click, click to hide
+
 **Timer**:
 `timer` Command から開始する、同時に1本だけの one-shot countdown。
 _Avoid_: Pomodoro, alarm, reminder

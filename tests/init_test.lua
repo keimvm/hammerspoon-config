@@ -31,7 +31,12 @@ test.test("init.lua は同梱の設定を検証して各機能を開始する", 
   test.equal(1, #state.pathwatchers)
   test.equal(true, state.pathwatchers[1].started)
   test.equal(0, #state.alerts)
-  test.equal(0, #state.eventtaps, "keyDown などを監視する eventtap を作らない")
+  -- 常駐する eventtap は Dock Toggle の左クリックだけ。keyDown は監視しない。
+  test.equal(1, #state.eventtaps)
+  test.equal(true, state.eventtaps[1].started)
+  test.equal("leftMouseDown", state.eventtaps[1].watchedTypes[1])
+  test.equal("leftMouseUp", state.eventtaps[1].watchedTypes[2])
+  test.equal(2, #state.eventtaps[1].watchedTypes)
 end)
 
 test.test("init.lua の既定の Hotkey は矢印・アプリ切り替え・タイマーを動かす", function()

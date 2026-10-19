@@ -19,12 +19,13 @@ git diff --check
 
 | 対象 | 主な確認内容 | テスト |
 | --- | --- | --- |
-| 起動 | 同梱の設定での適用内容、問題がある設定では何も適用せず監視だけ始めること、登録できない Hotkey の報告、keyDown を監視する eventtap を作らないこと | [init_test.lua](../tests/init_test.lua) |
+| 起動 | 同梱の設定での適用内容、問題がある設定では何も適用せず監視だけ始めること、登録できない Hotkey の報告、常駐する eventtap が Dock Toggle の左クリックだけで keyDown を監視しないこと | [init_test.lua](../tests/init_test.lua) |
 | Config Preflight | 型・項目名・キー名の検証、打ち間違いの候補、問題の集約、Hotkey Identity の重複と範囲による使い分け、設定データを変更しないこと | [preflight_test.lua](../tests/preflight_test.lua)、[chord_test.lua](../tests/chord_test.lua) |
 | Hotkey | send の繰り返しと once、run の Command と関数・失敗時の表示、only / except の切り替え、表示名 | [hotkeys_test.lua](../tests/hotkeys_test.lua) |
 | Safe Reload | 対象ファイルだけの監視、内容が同じ保存の無視、問題がある変更の拒否、Command からの強制再読み込み | [reloader_test.lua](../tests/reloader_test.lua) |
 | Input Remap・Input Source | hidutil に渡す変換、解除、失敗の記録、最前面アプリに応じた英数・かな | [remap_test.lua](../tests/remap_test.lua)、[input_source_test.lua](../tests/input_source_test.lua) |
 | App Switcher | 起動、非表示、Space の優先、巡回・再表示、Finder の非 standard window とデスクトップの区別、補助要素の除外、Space 取得失敗時の誤移動防止 | [app_switcher_test.lua](../tests/app_switcher_test.lua) |
+| Dock Toggle | 最前面アプリのアイコンで押下と離しを止めて隠すこと、バンドルのパスでの判別、最前面でない・修飾キーつき・Dock 以外・ウィンドウなし・最小化では通すこと、Dock の再起動、各 AX 要素の問い合わせ前の上限設定、上限設定・取得失敗時のクリック通過と復旧後の再試行、設定の検証 | [dock_toggle_test.lua](../tests/dock_toggle_test.lua) |
 | タイマー・コマンドパレット | 入力、単位切り替え、カウントダウン、完了表示・音、パレットの一覧と実行、タイマーの停止 | [timer_test.lua](../tests/timer_test.lua)、[palette_test.lua](../tests/palette_test.lua) |
 
 ## 実機確認
@@ -76,6 +77,20 @@ git diff --check
 
 - [ ] Zed、cmux、Visual Studio Code をそれぞれ最前面にすると、英数に切り替わる。
 - [ ] Typora や Notion など対象外のアプリでは、現在の入力ソースを維持する。
+
+### Dock Toggle
+
+- [ ] 最前面でないアプリの Dock アイコンをクリックすると、そのアプリが前面に出る。
+- [ ] もう一度クリックすると、アプリ全体が非表示になる。さらにクリックすると再表示される。
+- [ ] Visual Studio Code でも同じように動く（Dock の表示名とアプリ名が違うアプリ）。
+- [ ] Finder のウィンドウをすべて閉じ、Finder が最前面の状態で Finder のアイコンをクリックすると、新しいウィンドウが開く。
+- [ ] ウィンドウをすべて最小化したアプリのアイコンをクリックすると、隠さずに元に戻す。
+- [ ] Command + クリックで Finder に表示される。右クリックと Control + クリックでメニューが出る。
+- [ ] ウィンドウ内やメニューバーのクリックがこれまでどおり反応し、遅れを感じない。
+- [ ] 検証用アプリの PID を確認し、ターミナルで `sleep 5; kill -STOP <PID>` を実行して、5秒以内にそのアプリを前面にする。一時停止後にそのアプリの Dock アイコンをクリックしても、Hammerspoon の Hotkey や他のクリックが長く待たされず、アプリを隠さない。確認後はターミナルから `kill -CONT <PID>` で再開し、前面に戻してから再びアイコンをクリックすると隠せる。
+- [ ] ターミナルで `killall Dock` を実行した後も、もう一度クリックで隠せる。
+- [ ] Dock を自動的に隠す設定や、画面の左右に置いた場合も動く。
+- [ ] フルスクリーンのアプリで画面下端をクリックしても、アプリが隠れない。
 
 ### タイマー
 

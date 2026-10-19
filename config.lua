@@ -40,4 +40,7 @@ return {
   inputSource = {
     eisu = { "Zed", "cmux", "Visual Studio Code" },
   },
+
+  -- 最前面アプリの Dock アイコンをもう一度クリックすると、そのアプリを非表示にする。
+  dockToggle = true,
 }

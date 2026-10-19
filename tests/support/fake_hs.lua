@@ -51,6 +51,8 @@ function M.app(name, options)
   for _, window in ipairs(app.windows) do window.owner = app end
 
   function app:name() return name end
+  function app:path() return options.path or ("/Applications/" .. name .. ".app") end
+  function app:pid() return options.pid or 1 end
   function app:bundleID() return options.bundleID or ("test." .. string.lower(name)) end
   function app:allWindows() return self.windows end
   function app:mainWindow() return self.main or self.windows[1] end
@@ -94,6 +96,7 @@ function M.new()
     applicationWatchers = {},
     applications = {},
     appleScripts = {},
+    axElements = {},
     choosers = {},
     closedAlerts = {},
     consoleOpened = 0,
@@ -122,12 +125,14 @@ function M.new()
   local hs = {
     alert = {},
     application = { watcher = { activated = "activated" } },
+    axuielement = {},
     chooser = {},
     configdir = ".",
     eventtap = {
       event = {
         types = {
           leftMouseDown = "leftMouseDown",
+          leftMouseUp = "leftMouseUp",
           rightMouseDown = "rightMouseDown",
           otherMouseDown = "otherMouseDown",
         },
@@ -216,6 +221,56 @@ function M.new()
 
   function hs.application.get(hint)
     return state.applications[hint]
+  end
+
+  -- 各要素の問い合わせ時点の上限を記録し、state.axErrors で AX の失敗を再現する。
+  local function axElement(kind, attributes)
+    local element = { kind = kind, queries = {} }
+    local function failed(name)
+      return state.axErrors and state.axErrors[kind .. "." .. name]
+    end
+    function element:setTimeout(value)
+      if failed("setTimeout") then return nil, "invalid element" end
+      self.timeout = value
+      return self
+    end
+    function element:attributeValue(name)
+      table.insert(self.queries, { name = name, timeout = self.timeout })
+      if failed(name) then return nil, "cannot complete" end
+      return attributes(name)
+    end
+    table.insert(state.axElements, element)
+    return element
+  end
+
+  -- state.dockItems の { x, y, w, h, role, subrole, url } を Dock の要素として返す。
+  function hs.axuielement.applicationElement(app)
+    table.insert(state.operations, "axuielement.applicationElement")
+    local isDock = app:name() == "Dock"
+    local element = axElement(isDock and "dock" or "app", function(name)
+      if name == "AXFocusedWindow" and app.focused then
+        return axElement("window", function(attribute)
+          if attribute == "AXMinimized" then return app.focused:isMinimized() end
+          if attribute == "AXSubrole" then return app.focused:subrole() end
+        end)
+      end
+    end)
+    element.pid = app:pid()
+    function element:elementAtPosition(point)
+      table.insert(self.queries, { name = "elementAtPosition", timeout = self.timeout })
+      if state.axErrors and state.axErrors["dock.elementAtPosition"] then return nil, "cannot complete" end
+      for _, item in ipairs(state.dockItems or {}) do
+        if point.x >= item.x and point.x < item.x + item.w and point.y >= item.y and point.y < item.y + item.h then
+          return axElement("item", function(name)
+            if name == "AXRole" then return item.role or "AXDockItem" end
+            if name == "AXSubrole" then return item.subrole or "AXApplicationDockItem" end
+            if name == "AXURL" then return item.url end
+          end)
+        end
+      end
+      return nil, "no element"
+    end
+    return element
   end
 
   function hs.application.find(hint)
@@ -394,6 +449,14 @@ function M.new()
   function hs.eventtap.new(watchedTypes, callback)
     table.insert(state.operations, "eventtap.new")
     local tap = { watchedTypes = watchedTypes, callback = callback, started = false }
+    -- 1つのマウスイベントを送り、止めたかどうかを返す。
+    function tap:send(eventType, point, flags)
+      local event = {}
+      function event:getType() return eventType end
+      function event:location() return point end
+      function event:getFlags() return flags or {} end
+      return self.callback(event)
+    end
     function tap:start()
       self.started = true
       return self

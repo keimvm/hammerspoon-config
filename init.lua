@@ -1,5 +1,6 @@
 -- Hammerspoon の入口。config.lua を検証し、問題がなければ上から順に適用する。
 -- テストでは設定テーブルを引数で渡せる。
+local dockToggle = require("modules.dock_toggle")
 local frontmost = require("modules.frontmost")
 local hotkeys = require("modules.hotkeys")
 local inputSource = require("modules.input_source")
@@ -30,6 +31,7 @@ remap.apply(config.remap)
 local bound, failures = hotkeys.start(config.hotkeys)
 inputSource.start(config.inputSource)
 frontmost.start()
+dockToggle.start(config.dockToggle)
 palette.use(bound)
 
 if #failures > 0 then
