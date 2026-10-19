@@ -365,7 +365,11 @@ function M.new()
   end
 
   function hs.timer.doAfter(delay, callback)
-    local timer = { delay = delay, callback = callback }
+    local timer = { delay = delay, callback = callback, running = true }
+    function timer:stop()
+      self.running = false
+      return self
+    end
     table.insert(state.timers, timer)
     return timer
   end

@@ -5,7 +5,10 @@ local ui = require("modules.ui")
 local M = {}
 
 local log = hs.logger.new("app_switcher", "warning")
-local appState = {}  -- key: bundleID or appName -> { lastWinId = number }
+-- 最前面で2回押したとみなす間隔（秒）。この間は非表示を保留する。
+local DOUBLE_PRESS_INTERVAL = 0.3
+-- 最前面で押した直後の状態。{ key, at, app, hideTimer, winId }
+local lastPress
 
 local function stateKey(app, fallbackName)
   return (app and app:bundleID()) or fallbackName
@@ -18,6 +21,17 @@ local function findRunningApp(hint)
   return hs.application.find(hint, false, true)
 end
 
+-- 保留中の非表示を取り消す。別アプリの Hotkey なら、取り消さずにすぐ隠す。
+local function settlePendingHide(key)
+  local pending = lastPress
+  lastPress = nil
+  if not (pending and pending.hideTimer) then return end
+
+  pending.hideTimer:stop()
+  if pending.key ~= key then pending.app:hide() end
+end
+
+-- 候補はアプリのウィンドウ一覧の順（重なり順）に並べる。
 local function getCandidateWindows(app)
   local wins, ids, seen = {}, {}, {}
   local function addWindow(win)
@@ -86,23 +100,46 @@ local function getPreferredCandidateWindows(wins, ids)
   wins = isCurrent and current or other
   if #wins == 0 then return nil end
 
-  -- OS を跨ぐ ID 取得は候補ごとに1回とし、比較関数では Lua の値だけを扱う。
-  table.sort(wins, function(a, b) return ids[a] < ids[b] end)
-
   return wins, isCurrent
 end
 
-local function nextIndexByLastId(wins, lastWinId)
-  if #wins == 0 then return nil end
-  if not lastWinId then return 1 end
-
-  for i, w in ipairs(wins) do
-    if w:id() == lastWinId then
-      return (i % #wins) + 1
-    end
+local function visibleWindows(wins)
+  local visible = {}
+  for _, win in ipairs(wins) do
+    if not win:isMinimized() then table.insert(visible, win) end
   end
+  return visible
+end
 
-  return 1
+local function findById(wins, ids, id)
+  if not id then return nil end
+  for _, win in ipairs(wins) do
+    if ids[win] == id then return win end
+  end
+end
+
+local function focusedWindowId(app)
+  local fw = app:focusedWindow()
+  return fw and fw:id()
+end
+
+-- 戻り先。直前に使ったウィンドウ、なければ重なり順で一番上を選ぶ。
+-- 最小化中のウィンドウは、ほかに候補がないときだけ選ぶ。
+local function topWindow(app, wins, ids)
+  local visible = visibleWindows(wins)
+  local pool = #visible > 0 and visible or wins
+  return findById(pool, ids, focusedWindowId(app)) or pool[1]
+end
+
+-- 巡回は重なり順ではなく ID 順にする。前面に出すたびに重なり順が変わるため。
+local function nextWindow(wins, ids, currentId)
+  local sorted = { table.unpack(wins) }
+  -- OS を跨ぐ ID 取得は候補ごとに1回とし、比較関数では Lua の値だけを扱う。
+  table.sort(sorted, function(a, b) return ids[a] < ids[b] end)
+  for i, win in ipairs(sorted) do
+    if ids[win] == currentId then return sorted[(i % #sorted) + 1] end
+  end
+  return sorted[1]
 end
 
 local function focusWindow(app, win)
@@ -134,65 +171,86 @@ local function reopenApp(app)
   return ok
 end
 
-local function focusNextWindowAfterReopen(appName)
+local function focusTopWindowAfterReopen(appName)
   hs.timer.doAfter(0.05, function()
     local app = findRunningApp(appName)
     if not app then return end
 
-    local key = stateKey(app, appName)
-    appState[key] = appState[key] or { lastWinId = nil }
+    local wins, ids = getCandidateWindows(app)
+    wins = getPreferredCandidateWindows(wins, ids)
+    if not (wins and #wins > 0) then return end
 
-    local wins = getPreferredCandidateWindows(getCandidateWindows(app))
-    if not wins then return end
-    local idx = nextIndexByLastId(wins, appState[key].lastWinId)
-    if not idx then return end
-
-    focusWindow(app, wins[idx])
-    appState[key].lastWinId = wins[idx]:id()
+    focusWindow(app, topWindow(app, wins, ids))
   end)
+end
+
+-- 最前面で押されたとき。1回なら隠し、短い間隔で続けて押されたら次のウィンドウへ進む。
+-- ウィンドウが1つなら巡回先がないため、待たずに隠す。
+local function pressWhileFrontmost(app, key, visible, ids, focusedId)
+  local now = hs.timer.secondsSinceEpoch()
+  local previous = lastPress
+  local isRepeat = previous and previous.key == key and now - previous.at < DOUBLE_PRESS_INTERVAL
+  settlePendingHide(key)
+
+  if #visible < 2 then
+    app:hide()
+    return
+  end
+
+  if isRepeat then
+    -- 前面化の直後は focusedWindow が古いことがあるため、直前に進めた先を基準にする。
+    local target = nextWindow(visible, ids, previous.winId or focusedId)
+    lastPress = { key = key, at = now, winId = ids[target] }
+    focusWindow(app, target)
+    return
+  end
+
+  local pending = { key = key, at = now, app = app }
+  pending.hideTimer = hs.timer.doAfter(DOUBLE_PRESS_INTERVAL, function()
+    if lastPress == pending then lastPress = nil end
+    app:hide()
+  end)
+  lastPress = pending
 end
 
 function M.toggleOrCycle(appName)
   local app = findRunningApp(appName)
+  local key = stateKey(app, appName)
 
   if not app then
+    settlePendingHide(key)
     hs.application.launchOrFocus(appName)
     return
   end
 
-  local key = stateKey(app, appName)
-  appState[key] = appState[key] or { lastWinId = nil }
-
   local wins, ids = getCandidateWindows(app)
   if #wins == 0 then
+    settlePendingHide(key)
     reopenApp(app)
-    focusNextWindowAfterReopen(appName)
+    focusTopWindowAfterReopen(appName)
     return
   end
 
   local isCurrent
   wins, isCurrent = getPreferredCandidateWindows(wins, ids)
   if not wins then
+    settlePendingHide(key)
     ui.toast("デスクトップを確認できませんでした。もう一度押してください。", 2)
     return
   end
 
   -- Finder のデスクトップが最前面なだけなら、非表示にせず別 Space のウィンドウを開く。
   if app:isFrontmost() and isCurrent then
-    local fw = app:focusedWindow()
-    local focusedId = fw and fw:id()
-    for _, win in ipairs(wins) do
-      if ids[win] == focusedId and not win:isMinimized() then
-        appState[key].lastWinId = focusedId
-        app:hide()
-        return
-      end
+    local visible = visibleWindows(wins)
+    local focusedId = focusedWindowId(app)
+    if findById(visible, ids, focusedId) then
+      pressWhileFrontmost(app, key, visible, ids, focusedId)
+      return
     end
   end
 
-  local idx = nextIndexByLastId(wins, appState[key].lastWinId)
-  focusWindow(app, wins[idx])
-  appState[key].lastWinId = wins[idx]:id()
+  settlePendingHide(key)
+  focusWindow(app, topWindow(app, wins, ids))
 end
 
 return M

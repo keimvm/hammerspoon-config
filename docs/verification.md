@@ -24,7 +24,7 @@ git diff --check
 | Hotkey | send の繰り返しと once、run の Command と関数・失敗時の表示、only / except の切り替え、表示名 | [hotkeys_test.lua](../tests/hotkeys_test.lua) |
 | Safe Reload | 対象ファイルだけの監視、内容が同じ保存の無視、問題がある変更の拒否、Command からの強制再読み込み | [reloader_test.lua](../tests/reloader_test.lua) |
 | Input Remap・Input Source | hidutil に渡す変換、解除、失敗の記録、最前面アプリに応じた英数・かな | [remap_test.lua](../tests/remap_test.lua)、[input_source_test.lua](../tests/input_source_test.lua) |
-| App Switcher | 起動、非表示、Space の優先、巡回・再表示、Finder の非 standard window とデスクトップの区別、補助要素の除外、Space 取得失敗時の誤移動防止 | [app_switcher_test.lua](../tests/app_switcher_test.lua) |
+| App Switcher | 起動、非表示、Space の優先、直前のウィンドウへの復帰、最小化中の除外、2回押しでの巡回と非表示の保留、再表示、Finder の非 standard window とデスクトップの区別、補助要素の除外、Space 取得失敗時の誤移動防止 | [app_switcher_test.lua](../tests/app_switcher_test.lua) |
 | Dock Toggle | 最前面アプリのアイコンで押下と離しを止めて隠すこと、バンドルのパスでの判別、最前面でない・修飾キーつき・Dock 以外・ウィンドウなし・最小化では通すこと、Dock の再起動、各 AX 要素の問い合わせ前の上限設定、上限設定・取得失敗時のクリック通過と復旧後の再試行、設定の検証 | [dock_toggle_test.lua](../tests/dock_toggle_test.lua) |
 | タイマー・コマンドパレット | 入力、単位切り替え、カウントダウン、完了表示・音、パレットの一覧と実行、タイマーの停止 | [timer_test.lua](../tests/timer_test.lua)、[palette_test.lua](../tests/palette_test.lua) |
 
@@ -64,9 +64,14 @@ git diff --check
 
 - [ ] 対象アプリが未起動なら、その Hotkey で起動する。
 - [ ] Finder のウィンドウをすべて閉じ、Finder が最前面の状態でも Hotkey で新しいウィンドウが開く。
-- [ ] 現在の Space の対象ウィンドウが最前面で同じ Hotkey を押すと、別の Space のウィンドウも含めてアプリ全体を非表示にする。
+- [ ] 現在の Space の対象ウィンドウが最前面で同じ Hotkey を1回押すと、別の Space のウィンドウも含めてアプリ全体を非表示にする。
 - [ ] Space 1 と Space 2 に対象ウィンドウを用意し、アプリが最前面でない状態から各 Space で Hotkey を押すと、同じ Space のウィンドウにフォーカスする。
-- [ ] 現在の Space に複数の対象ウィンドウがある場合、アプリが最前面でない状態から呼び出すたびに、その Space 内で対象が順に切り替わる。
+- [ ] 現在の Space に Google Chrome のウィンドウを3つ用意する。3つ目をクリックしてから別のアプリへ移り、Hotkey を押すと3つ目に戻る。何度繰り返しても同じウィンドウに戻る。
+- [ ] 上の状態で Hotkey を1回押して隠し、もう一度押すと、隠す前に使っていたウィンドウに戻る。Dock Toggle や `⌘H` で隠した場合も同じ。
+- [ ] Chrome が最前面のときに Hotkey を素早く2回押すと、隠れずに次のウィンドウへ切り替わる。続けて押すたびに、3つのウィンドウを順に巡回する。
+- [ ] 1回押してから隠れるまでの待ち時間が気にならない。ウィンドウが1つしかないアプリ（例: Typora）では、待たずにすぐ隠れる。
+- [ ] Chrome のウィンドウの1つを最小化して別のアプリへ移り、Hotkey を押すと、最小化したウィンドウは元に戻らず、表示中のウィンドウが前面に出る。2回押しの巡回でも最小化したウィンドウは飛ばす。
+- [ ] Chrome が最前面のときに Chrome の Hotkey を押し、0.3 秒以内に別アプリの Hotkey を押すと、Chrome が隠れてから別アプリへ切り替わる。
 - [ ] 現在の Space の対象ウィンドウが最小化されている場合、別の Space のウィンドウより優先して復帰する。
 - [ ] 現在の Space に対象ウィンドウがない場合は、別の Space のウィンドウへ移動する。
 - [ ] Finder のデスクトップだけが最前面で、対象ウィンドウは別 Space にだけある場合も、1回の Hotkey でそちらへ移動する。

@@ -45,7 +45,7 @@ _Avoid_: Auto reload, hot reload
 _Avoid_: Hotkey, shortcut
 
 **App Switcher**:
-`app` の動作。macOS アプリを起動、focus、hide、または window cycle する。window cycle は各 display で現在表示中の Space を優先し、対象 window がないと確認できた場合だけ全 Space を対象にする。Space の取得失敗は window がない場合と区別する。
+`app` の動作。macOS アプリを起動、focus、hide、または window cycle する。他のアプリから戻るときは、直前に使った window（最小化中を除く）を focus する。window cycle は、最前面のときに短い間隔で2回押した場合だけ行う。候補は各 display で現在表示中の Space を優先し、対象 window がないと確認できた場合だけ全 Space を対象にする。Space の取得失敗は window がない場合と区別する。
 _Avoid_: App launcher
 
 **Input Source**:

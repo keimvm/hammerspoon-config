@@ -22,18 +22,19 @@ test.test("App Switcher は候補が1つでも所属 Space があれば移動す
   test.equal(0, #state.logs)
 end)
 
-test.test("App Switcher は window 一覧の順番を変更しない", function()
+test.test("App Switcher は重なり順で一番上の window へ戻り、一覧の順番を変更しない", function()
   local hs, state = fakeHs.new()
-  local second = fakeHs.window(20, { standard = false })
-  local first = fakeHs.window(10, { standard = false })
-  local app = registerRunningApp(state, "Finder", { windows = { second, first } })
+  local top = fakeHs.window(20, { standard = false })
+  local below = fakeHs.window(10, { standard = false })
+  local app = registerRunningApp(state, "Finder", { windows = { top, below } })
   function app:mainWindow() return nil end
   loadAppSwitcher(hs).toggleOrCycle("Finder")
-  test.equal(1, first.focusCount)
-  test.equal(second, app.windows[1])
+  test.equal(1, top.focusCount)
+  test.equal(0, below.focusCount)
+  test.equal(top, app.windows[1])
 end)
 
-test.test("App Switcher は sort の比較ごとに window ID を取得し直さない", function()
+test.test("App Switcher は巡回の sort で比較ごとに window ID を取得し直さない", function()
   local hs, state = fakeHs.new()
   local windows = {}
   local idReads = 0
@@ -45,10 +46,16 @@ test.test("App Switcher は sort の比較ごとに window ID を取得し直さ
     end
     table.insert(windows, window)
   end
-  registerRunningApp(state, "Finder", { windows = windows })
-  loadAppSwitcher(hs).toggleOrCycle("Finder")
+  registerRunningApp(state, "Finder", {
+    frontmost = true, windows = windows, focusedWindow = windows[1],
+  })
+  local appSwitcher = loadAppSwitcher(hs)
+  appSwitcher.toggleOrCycle("Finder")
+  state.now = state.now + 0.1
+  idReads = 0
+  appSwitcher.toggleOrCycle("Finder")
   test.equal(1, windows[64].focusCount)
-  test.truthy(idReads <= 65, "window ID の取得回数: " .. idReads)
+  test.truthy(idReads <= 66, "window ID の取得回数: " .. idReads)
 end)
 
 test.test("App Switcher は未起動の app を launch する", function()
@@ -74,30 +81,159 @@ test.test("App Switcher は frontmost app を hide する", function()
   test.equal(true, app.hidden)
 end)
 
-test.test("App Switcher は非 frontmost app の window を stable order で cycle する", function()
+test.test("App Switcher は他のアプリから戻ると直前に使った window を前面に出す", function()
   local hs, state = fakeHs.new()
   local otherSpace = fakeHs.window(5, { spaces = { 2 } })
-  local second = fakeHs.window(20, { spaces = { 1 } })
   local first = fakeHs.window(10, { spaces = { 1 } })
+  local second = fakeHs.window(20, { spaces = { 1 } })
+  local third = fakeHs.window(30, { spaces = { 1 } })
   local app = registerRunningApp(state, "Codex", {
-    windows = { second, otherSpace, first },
+    windows = { first, otherSpace, second, third },
   })
   state.activeSpaces = { main = 1 }
 
   local appSwitcher = loadAppSwitcher(hs)
   appSwitcher.toggleOrCycle("Codex")
-
   test.equal(true, app.activated)
   test.equal(1, first.focusCount)
-  test.equal(0, second.focusCount)
-  test.equal(0, otherSpace.focusCount)
 
+  -- クリックで third を使ってから、Cmd+Tab などで他のアプリへ移る。
+  app.focused, app.frontmost = third, false
+  appSwitcher.toggleOrCycle("Codex")
+  test.equal(1, third.focusCount)
+
+  -- 繰り返し戻っても同じ window のまま。
   app.frontmost = false
   appSwitcher.toggleOrCycle("Codex")
-
-  test.equal(1, first.focusCount)
-  test.equal(1, second.focusCount)
+  test.equal(2, third.focusCount)
+  test.equal(0, second.focusCount)
   test.equal(0, otherSpace.focusCount)
+end)
+
+test.test("App Switcher は隠した後の再表示で、隠したときの window を前面に出す", function()
+  for _, hideByHotkey in ipairs({ true, false }) do
+    local hs, state = fakeHs.new()
+    local first = fakeHs.window(10)
+    local second = fakeHs.window(20)
+    local app = registerRunningApp(state, "Codex", {
+      frontmost = true, windows = { second, first }, focusedWindow = second,
+    })
+
+    local appSwitcher = loadAppSwitcher(hs)
+    if hideByHotkey then
+      appSwitcher.toggleOrCycle("Codex")
+      state.timers[1].callback()
+    else
+      app:hide()  -- Dock Toggle や ⌘H で隠した場合
+    end
+    test.equal(true, app.hidden)
+
+    appSwitcher.toggleOrCycle("Codex")
+    test.equal(false, app.hidden)
+    test.equal(1, second.focusCount)
+    test.equal(0, first.focusCount)
+  end
+end)
+
+test.test("App Switcher は戻り先に最小化中の window を選ばない", function()
+  local hs, state = fakeHs.new()
+  local minimized = fakeHs.window(20, { minimized = true })
+  local visible = fakeHs.window(10)
+  registerRunningApp(state, "Codex", {
+    windows = { minimized, visible }, focusedWindow = minimized,
+  })
+
+  loadAppSwitcher(hs).toggleOrCycle("Codex")
+
+  test.equal(1, visible.focusCount)
+  test.equal(0, minimized.focusCount)
+  test.equal(true, minimized.minimized)
+end)
+
+test.test("App Switcher は最前面で1回だけ押すと、2回押しの間隔を待ってから隠す", function()
+  local hs, state = fakeHs.new()
+  local first = fakeHs.window(10)
+  local second = fakeHs.window(20)
+  local app = registerRunningApp(state, "Codex", {
+    frontmost = true, windows = { first, second }, focusedWindow = first,
+  })
+
+  loadAppSwitcher(hs).toggleOrCycle("Codex")
+
+  test.equal(false, app.hidden)
+  test.equal(1, #state.timers)
+  test.equal(0.3, state.timers[1].delay)
+  state.timers[1].callback()
+  test.equal(true, app.hidden)
+  test.equal(0, first.focusCount + second.focusCount)
+end)
+
+test.test("App Switcher は最前面で続けて押すと、隠さずに次の window へ進む", function()
+  local hs, state = fakeHs.new()
+  local first = fakeHs.window(10)
+  local second = fakeHs.window(20)
+  local third = fakeHs.window(30, { minimized = true })
+  local fourth = fakeHs.window(40)
+  local app = registerRunningApp(state, "Codex", {
+    frontmost = true, windows = { second, first, third, fourth }, focusedWindow = second,
+  })
+
+  local appSwitcher = loadAppSwitcher(hs)
+  appSwitcher.toggleOrCycle("Codex")
+  state.now = state.now + 0.2
+  appSwitcher.toggleOrCycle("Codex")
+
+  test.equal(false, state.timers[1].running)
+  test.equal(1, fourth.focusCount)
+  test.equal(0, third.focusCount)
+
+  -- 前面化の直後で focusedWindow が古くても、直前に進めた先から数える。
+  app.focused = second
+  state.now = state.now + 0.2
+  appSwitcher.toggleOrCycle("Codex")
+  test.equal(1, first.focusCount)
+  test.equal(false, app.hidden)
+  test.equal(1, #state.timers)
+
+  -- 間隔を過ぎてから押すと、巡回せずに非表示を保留する。
+  state.now = state.now + 0.5
+  appSwitcher.toggleOrCycle("Codex")
+  test.equal(2, #state.timers)
+  test.equal(1, first.focusCount)
+  test.equal(0, second.focusCount)
+end)
+
+test.test("App Switcher は最前面の window が1つなら待たずに隠す", function()
+  local hs, state = fakeHs.new()
+  local window = fakeHs.window(10)
+  local minimized = fakeHs.window(20, { minimized = true })
+  local app = registerRunningApp(state, "Codex", {
+    frontmost = true, windows = { window, minimized }, focusedWindow = window,
+  })
+
+  loadAppSwitcher(hs).toggleOrCycle("Codex")
+
+  test.equal(true, app.hidden)
+  test.equal(0, #state.timers)
+end)
+
+test.test("App Switcher は非表示の保留中に別アプリの Hotkey が押されたら、すぐ隠してから切り替える", function()
+  local hs, state = fakeHs.new()
+  local codex = registerRunningApp(state, "Codex", {
+    frontmost = true, windows = { fakeHs.window(10), fakeHs.window(20) },
+  })
+  codex.focused = codex.windows[1]
+  local finderWindow = fakeHs.window(30)
+  registerRunningApp(state, "Finder", { windows = { finderWindow } })
+
+  local appSwitcher = loadAppSwitcher(hs)
+  appSwitcher.toggleOrCycle("Codex")
+  state.now = state.now + 0.1
+  appSwitcher.toggleOrCycle("Finder")
+
+  test.equal(true, codex.hidden)
+  test.equal(false, state.timers[1].running)
+  test.equal(1, finderWindow.focusCount)
 end)
 
 test.test("App Switcher は各 display で現在表示中の Space にある window を優先する", function()
@@ -172,19 +308,19 @@ test.test("App Switcher は別 Space の standard window より現在の非 stan
   test.equal(0, otherSpace.focusCount)
 end)
 
-test.test("App Switcher は現在表示中の Space に window がなければ全 Space の cycle へ fallback する", function()
+test.test("App Switcher は現在表示中の Space に window がなければ別 Space の一番上の window へ移動する", function()
   local hs, state = fakeHs.new()
-  local second = fakeHs.window(20, { spaces = { 2 } })
-  local first = fakeHs.window(10, { spaces = { 2 } })
+  local top = fakeHs.window(20, { spaces = { 2 } })
+  local below = fakeHs.window(10, { spaces = { 2 } })
   registerRunningApp(state, "Finder", {
-    windows = { second, first },
+    windows = { top, below },
   })
   state.activeSpaces = { main = 1 }
 
   loadAppSwitcher(hs).toggleOrCycle("Finder")
 
-  test.equal(1, first.focusCount)
-  test.equal(0, second.focusCount)
+  test.equal(1, top.focusCount)
+  test.equal(0, below.focusCount)
 end)
 
 test.test("App Switcher は app 全体を hide した後も Hotkey を押した Space の window を表示する", function()
