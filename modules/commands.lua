@@ -24,6 +24,16 @@ local COMMANDS = {
     run = function() hs.openConsole() end,
   },
   {
+    id = "finder-cut",
+    label = "Finder でファイルを切り取り",
+    run = function() require("modules.finder_cut").cut() end,
+  },
+  {
+    id = "finder-paste",
+    label = "Finder で貼り付け（切り取ったファイルは移動）",
+    run = function() require("modules.finder_cut").paste() end,
+  },
+  {
     id = "remap-off",
     label = "キー変換を一時解除",
     run = function() require("modules.remap").clear() end,

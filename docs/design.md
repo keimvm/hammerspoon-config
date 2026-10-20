@@ -27,6 +27,7 @@
 | `modules/input_source.lua` | アプリごとの Input Source の切り替え |
 | `modules/frontmost.lua` | 最前面アプリの変化を各機能へ知らせる |
 | `modules/dock_toggle.lua` | Dock Toggle |
+| `modules/finder_cut.lua` | Finder Cut |
 | `modules/palette.lua` | コマンドパレット |
 | `modules/timer.lua` | タイマー |
 | `modules/ui.lua` | 通知と chooser の見た目と振る舞い |
@@ -77,6 +78,13 @@
   - アプリは Dock 項目の `AXURL`（バンドルのパス）で見分ける。Visual Studio Code のように、Dock の表示名とアプリ名（`Code`）が違うアプリがあるため。
   - 隠すと決めたクリックは、押下と離しの両方を止める。押下だけを止めると Dock が押されたままになり、離しだけを止めると長押しのメニューが出る。そのため、最前面アプリのアイコンでは長押しのメニューとドラッグでの並べ替えが使えない。
   - ウィンドウがない、または最小化中のときは隠さず、Dock 本来の動き（新しいウィンドウを開く、元に戻す）に任せる。App Switcher の「今のウィンドウが最前面なら隠す」と判断をそろえるため。
+
+- **Finder Cut は Command と Scope で作る。** 専用の設定項目にせず、`finder-cut` / `finder-paste` を `only = "Finder"` の Hotkey から呼ぶ。キーの割り当てを Hotkey のリストに集め、Hotkey Identity の重複検出とコマンドパレットの早見表をそのまま使うため。
+  - Finder にはファイルの切り取りがないため、切り取りは `⌘C` を送ってコピーし、貼り付けを `⌥⌘V`（移動）に変える。ファイルを自分で pasteboard に書かず、Finder のコピーに任せる。
+  - 切り取ったかどうかは、コピー後の pasteboard の `changeCount` で覚える。切り取りの後に別のものをコピーすると値が変わり、通常の貼り付けに戻る。Finder のコピーは非同期のため、値が変わるまで短い間隔で待つ（最長 1 秒）。
+  - フォーカス中の UI 要素が文字の入力欄（`AXTextField` など）なら、文字の切り取り・貼り付けを送る。AX の問い合わせには Dock Toggle と同じく 0.05 秒の上限を付け、失敗したら通常の操作にする。
+  - 送り直すキーは `hs.eventtap.keyStroke` の `application` 引数で最前面アプリへ直接送る。全体へ送ると、自分の `⌘X` / `⌘V` の Hotkey に戻ってしまうため。
+  - `⌘V` は Finder では常に Hotkey が受け取って送り直す。切り取った間だけ有効にする方式は、Scope による有効・無効の切り替えと競合するため採らない。
 
 ### 持たない機能
 

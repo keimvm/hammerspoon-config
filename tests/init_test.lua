@@ -25,7 +25,7 @@ test.test("init.lua は同梱の設定を検証して各機能を開始する", 
   test.equal(1, #state.tasks)
   test.equal("/usr/bin/hidutil", state.tasks[1].path)
   test.equal(4, #state.jsonValues[1].UserKeyMapping)
-  test.equal(16, #state.hotkeys)
+  test.equal(18, #state.hotkeys)
   test.equal(1, #state.applicationWatchers)
   test.equal(true, state.applicationWatchers[1].started)
   test.equal(1, #state.pathwatchers)
@@ -73,6 +73,20 @@ test.test("init.lua は Google Chrome が最前面の間だけ cmd+d を無効�
   test.equal(false, blocker.enabled)
 end)
 
+test.test("init.lua は Finder が最前面の間だけ cmd+x と cmd+v を Finder Cut にする", function()
+  local _, state = boot()
+  local cut, paste = hotkeyFor(state, "x", { "cmd" }), hotkeyFor(state, "v", { "cmd" })
+
+  test.equal(false, cut.enabled)
+  test.equal(false, paste.enabled)
+  state.activate(fakeHs.app("Finder", { bundleID = "com.apple.finder" }))
+  test.equal(true, cut.enabled)
+  test.equal(true, paste.enabled)
+  state.activate(fakeHs.app("Zed"))
+  test.equal(false, cut.enabled)
+  test.equal(false, paste.enabled)
+end)
+
 test.test("init.lua は対象アプリが最前面になると英数へ切り替える", function()
   local _, state = boot(nil, function(_, state)
     state.frontmostApplication = fakeHs.app("Zed")
@@ -110,7 +124,7 @@ test.test("init.lua は登録できない Hotkey があっても残りを登録�
     state.rejectedKeys.f5 = true
   end)
 
-  test.equal(15, #state.hotkeys)
+  test.equal(17, #state.hotkeys)
   test.equal(1, #state.alerts)
   test.contains(state.alerts[1], "登録できなかった Hotkey があります")
   test.contains(state.alerts[1], "hotkeys[7]: F5 を登録できませんでした")
@@ -122,7 +136,7 @@ test.test("init.lua は自分で再読み込みした後だけ完了を短く知
   end)
 
   test.equal(1, #state.alerts)
-  test.equal("設定を再読み込みしました（Hotkey 16 件）", state.alerts[1])
+  test.equal("設定を再読み込みしました（Hotkey 18 件）", state.alerts[1])
   test.equal(nil, state.settings["hammerspoon-config.reloaded"])
 end)
 

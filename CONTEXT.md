@@ -25,7 +25,7 @@ Hotkey が有効な範囲。`only` は指定したアプリが最前面の間だ
 _Avoid_: Context, condition, App Hotkey Blocker
 
 **Command**:
-`run` で名前を指定して呼べる組み込みの動作（`palette`、`timer`、`reload`、`console`、`remap-off`）。コマンドパレットにも並ぶ。
+`run` で名前を指定して呼べる組み込みの動作（`palette`、`timer`、`reload`、`console`、`finder-cut`、`finder-paste`、`remap-off`）。コマンドパレットにも並ぶ。
 _Avoid_: Action（Hotkey の動作の種類を指す）
 
 **Command Palette**:
@@ -55,6 +55,10 @@ _Avoid_: layout, input method, keyboard layout
 **Dock Toggle**:
 `config.dockToggle` で有効にする動作。最前面アプリの Dock アイコンをクリックすると、そのアプリを hide する。表示と再表示は Dock 本来の動きに任せる。
 _Avoid_: Dock click, click to hide
+
+**Finder Cut**:
+`finder-cut` と `finder-paste` の Command で行う、Finder でのファイルの移動。切り取りはコピーとして行い、そのコピーが pasteboard に残っている間の次の貼り付けを移動（⌥⌘V）に変える。文字の入力欄では通常の切り取り・貼り付けのまま。
+_Avoid_: Cut and paste, file cut
 
 **Timer**:
 `timer` Command から開始する、同時に1本だけの one-shot countdown。

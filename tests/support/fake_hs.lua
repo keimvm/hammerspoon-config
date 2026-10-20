@@ -110,6 +110,7 @@ function M.new()
     menubars = {},
     now = 1000,
     operations = {},
+    pasteboardChangeCount = 0,
     pathwatchers = {},
     playedSounds = {},
     rejectedKeys = {},
@@ -144,6 +145,7 @@ function M.new()
     logger = {},
     menubar = {},
     osascript = {},
+    pasteboard = {},
     pathwatcher = {},
     settings = {},
     spaces = {},
@@ -252,6 +254,12 @@ function M.new()
         return axElement("window", function(attribute)
           if attribute == "AXMinimized" then return app.focused:isMinimized() end
           if attribute == "AXSubrole" then return app.focused:subrole() end
+        end)
+      end
+      -- state.focusedRole は、フォーカス中の UI 要素（ファイル一覧や名前の入力欄）の AXRole。
+      if name == "AXFocusedUIElement" and state.focusedRole then
+        return axElement("focused", function(attribute)
+          if attribute == "AXRole" then return state.focusedRole end
         end)
       end
     end)
@@ -446,8 +454,12 @@ function M.new()
     return sound
   end
 
-  function hs.eventtap.keyStroke(mods, key, delay)
-    table.insert(state.keyStrokes, { mods = mods, key = key, delay = delay })
+  function hs.eventtap.keyStroke(mods, key, delay, application)
+    table.insert(state.keyStrokes, { mods = mods, key = key, delay = delay, application = application })
+  end
+
+  function hs.pasteboard.changeCount()
+    return state.pasteboardChangeCount
   end
 
   function hs.eventtap.new(watchedTypes, callback)

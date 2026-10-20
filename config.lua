@@ -32,6 +32,10 @@ return {
     -- Google Chrome ではブックマーク追加を無効にする。
     { "cmd+d", block = true, only = "Google Chrome" },
 
+    -- Finder では ⌘X → ⌘V でファイルを移動する（Finder Cut）。
+    { "cmd+x", run = "finder-cut", only = "Finder" },
+    { "cmd+v", run = "finder-paste", only = "Finder" },
+
     { "ctrl+p", run = "timer" },
     { "ctrl+;", run = "palette" },
   },

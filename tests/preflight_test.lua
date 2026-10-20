@@ -153,7 +153,7 @@ test.test("Config Preflight は動作に問題がある Hotkey の重複も同�
   })
 
   test.equal(2, #problems, table.concat(problems, "\n"))
-  expectProblem(problems, "hotkeys[2].run: Command 名（palette / timer / reload / console / remap-off）か関数を指定してください")
+  expectProblem(problems, "hotkeys[2].run: Command 名（palette / timer / reload / console / finder-cut / finder-paste / remap-off）か関数を指定してください")
   expectProblem(problems, "hotkeys[2]: ⌃R は hotkeys[1] と重複しています")
 end)
 
