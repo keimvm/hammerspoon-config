@@ -21,6 +21,22 @@ local function findRunningApp(hint)
   return hs.application.find(hint, false, true)
 end
 
+-- app:hide() は AX でアプリに隠すよう求め、結果も AX で読み返す。最前面の Zed などはこの応答に
+-- 0.4 秒ほどかかるため、AppleScriptObjC から NSRunningApplication で隠す。失敗したときだけ app:hide() を使う。
+-- AppKit を読み込むと1回 0.02 秒ほどかかるため、クラスは NSClassFromString で取る。
+-- アプリが終了していればエラーになる。hide の戻り値は隠せた場合も false になるため使わない。
+local function hideApp(app)
+  local ok = hs.osascript.applescript(string.format(
+    'use framework "Foundation"\n'
+      .. '((current application\'s NSClassFromString("NSRunningApplication"))'
+      .. "'s runningApplicationWithProcessIdentifier:%d)'s hide()",
+    app:pid()
+  ))
+  if ok then return end
+  log.wf("hide via NSRunningApplication failed for %s", app:name())
+  app:hide()
+end
+
 -- 保留中の非表示を取り消す。別アプリの Hotkey なら、取り消さずにすぐ隠す。
 local function settlePendingHide(key)
   local pending = lastPress
@@ -28,7 +44,7 @@ local function settlePendingHide(key)
   if not (pending and pending.hideTimer) then return end
 
   pending.hideTimer:stop()
-  if pending.key ~= key then pending.app:hide() end
+  if pending.key ~= key then hideApp(pending.app) end
 end
 
 -- 候補はアプリのウィンドウ一覧の順（重なり順）に並べる。
@@ -186,6 +202,28 @@ local function focusTopWindowAfterReopen(appName)
   end)
 end
 
+-- app:isFrontmost() は AX でアプリに問い合わせるため、最前面の Zed などで 0.4 秒ほど待たされる。
+-- NSWorkspace の最前面アプリと pid で比べる。
+local function isFrontmost(app)
+  local front = hs.application.frontmostApplication()
+  return front ~= nil and front:pid() == app:pid()
+end
+
+-- 画面上にある、そのアプリの通常レベルのウィンドウの数。WindowServer の情報だけを使い、アプリには問い合わせない。
+-- 最小化中や別 Space のウィンドウ、浮動パネルは数えない。取得できなければ nil。
+local function onscreenWindowCount(app)
+  local ok, list = pcall(hs.window.list, true)
+  if not ok or type(list) ~= "table" then return nil end
+
+  local pid, count = app:pid(), 0
+  for _, info in ipairs(list) do
+    if info.kCGWindowOwnerPID == pid and info.kCGWindowLayer == 0 and (info.kCGWindowAlpha or 1) > 0 then
+      count = count + 1
+    end
+  end
+  return count
+end
+
 -- 最前面で押されたとき。1回なら隠し、短い間隔で続けて押されたら次のウィンドウへ進む。
 -- ウィンドウが1つなら巡回先がないため、待たずに隠す。
 local function pressWhileFrontmost(app, key, visible, ids, focusedId)
@@ -195,7 +233,7 @@ local function pressWhileFrontmost(app, key, visible, ids, focusedId)
   settlePendingHide(key)
 
   if #visible < 2 then
-    app:hide()
+    hideApp(app)
     return
   end
 
@@ -210,7 +248,7 @@ local function pressWhileFrontmost(app, key, visible, ids, focusedId)
   local pending = { key = key, at = now, app = app }
   pending.hideTimer = hs.timer.doAfter(DOUBLE_PRESS_INTERVAL, function()
     if lastPress == pending then lastPress = nil end
-    app:hide()
+    hideApp(app)
   end)
   lastPress = pending
 end
@@ -222,6 +260,15 @@ function M.toggleOrCycle(appName)
   if not app then
     settlePendingHide(key)
     hs.application.launchOrFocus(appName)
+    return
+  end
+
+  -- 画面上のウィンドウが1つなら巡回先がないため、AX で調べずにすぐ隠す。
+  -- Zed など、最前面の間は AX の応答に 0.5 秒ほどかかるアプリがあるため。
+  local frontmost = isFrontmost(app)
+  if frontmost and onscreenWindowCount(app) == 1 then
+    settlePendingHide(key)
+    hideApp(app)
     return
   end
 
@@ -242,7 +289,7 @@ function M.toggleOrCycle(appName)
   end
 
   -- Finder のデスクトップが最前面なだけなら、非表示にせず別 Space のウィンドウを開く。
-  if app:isFrontmost() and isCurrent then
+  if frontmost and isCurrent then
     local visible = visibleWindows(wins)
     local focusedId = focusedWindowId(app)
     if findById(visible, ids, focusedId) then

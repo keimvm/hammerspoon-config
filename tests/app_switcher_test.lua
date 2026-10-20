@@ -241,6 +241,67 @@ test.test("App Switcher はタイトルのないダイアログを window とし
   test.equal(1, #state.timers)
 end)
 
+test.test("App Switcher は画面上の window が1つなら AX で調べずに隠す", function()
+  local hs, state = fakeHs.new()
+  local window = fakeHs.window(10)
+  local app = registerRunningApp(state, "Zed", {
+    pid = 42, frontmost = true, windows = { window }, focusedWindow = window,
+  })
+  function app:allWindows() error("AX で window 一覧を問い合わせない") end
+  function app:isFrontmost() error("AX で最前面かを問い合わせない") end
+  function app:hide() error("AX で隠さない") end
+  state.windowList = {
+    { kCGWindowOwnerPID = 42, kCGWindowLayer = 0, kCGWindowAlpha = 1 },
+    -- 浮動パネル、透明な window、別アプリの window は数えない。
+    { kCGWindowOwnerPID = 42, kCGWindowLayer = 3, kCGWindowAlpha = 1 },
+    { kCGWindowOwnerPID = 42, kCGWindowLayer = 0, kCGWindowAlpha = 0 },
+    { kCGWindowOwnerPID = 7, kCGWindowLayer = 0, kCGWindowAlpha = 1 },
+  }
+
+  loadAppSwitcher(hs).toggleOrCycle("Zed")
+
+  test.equal(true, app.hidden)
+  test.equal(0, #state.timers)
+end)
+
+test.test("App Switcher は NSRunningApplication で隠せなければ app:hide() で隠す", function()
+  local hs, state = fakeHs.new()
+  local window = fakeHs.window(10)
+  local app = registerRunningApp(state, "Codex", {
+    frontmost = true, windows = { window }, focusedWindow = window,
+  })
+  state.hideScriptFails = true
+
+  loadAppSwitcher(hs).toggleOrCycle("Codex")
+
+  test.equal(1, #state.hideScripts)
+  test.equal(true, app.hidden)
+  test.equal(1, #state.logs)
+end)
+
+test.test("App Switcher は画面上の window が2つ以上か取得できなければ AX で調べる", function()
+  for _, windowList in ipairs({
+    {
+      { kCGWindowOwnerPID = 42, kCGWindowLayer = 0, kCGWindowAlpha = 1 },
+      { kCGWindowOwnerPID = 42, kCGWindowLayer = 0, kCGWindowAlpha = 1 },
+    },
+    false,
+  }) do
+    local hs, state = fakeHs.new()
+    local first = fakeHs.window(10)
+    local second = fakeHs.window(20)
+    local app = registerRunningApp(state, "Zed", {
+      pid = 42, frontmost = true, windows = { first, second }, focusedWindow = first,
+    })
+    state.windowList = windowList
+
+    loadAppSwitcher(hs).toggleOrCycle("Zed")
+
+    test.equal(false, app.hidden)
+    test.equal(1, #state.timers)
+  end
+end)
+
 test.test("App Switcher は非表示の保留中に別アプリの Hotkey が押されたら、すぐ隠してから切り替える", function()
   local hs, state = fakeHs.new()
   local codex = registerRunningApp(state, "Codex", {

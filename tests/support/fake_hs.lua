@@ -40,8 +40,13 @@ function M.window(id, options)
   return window
 end
 
+-- pid を指定しない app にも、それぞれ別の pid を割り当てる。
+local nextPid = 1000
+
 function M.app(name, options)
   options = options or {}
+  nextPid = nextPid + 1
+  local pid = options.pid or nextPid
   local app = {
     activated = false,
     frontmost = options.frontmost == true,
@@ -53,7 +58,7 @@ function M.app(name, options)
 
   function app:name() return name end
   function app:path() return options.path or ("/Applications/" .. name .. ".app") end
-  function app:pid() return options.pid or 1 end
+  function app:pid() return pid end
   function app:bundleID() return options.bundleID or ("test." .. string.lower(name)) end
   function app:allWindows() return self.windows end
   function app:mainWindow() return self.main or self.windows[1] end
@@ -122,6 +127,8 @@ function M.new()
     tasks = {},
     timers = {},
     activeSpaces = { main = 1 },
+    windowList = {},
+    hideScripts = {},
   }
 
   local hs = {
@@ -195,8 +202,12 @@ function M.new()
     return createHotkey("hotkey.new", false, mods, key, pressedFn, releasedFn, repeatFn)
   end
 
+  -- state.frontmostApplication がなければ、登録済みで frontmost の app を返す。
   function hs.application.frontmostApplication()
-    return state.frontmostApplication
+    if state.frontmostApplication then return state.frontmostApplication end
+    for _, app in pairs(state.applications) do
+      if app.frontmost then return app end
+    end
   end
 
   function hs.application.watcher.new(callback)
@@ -299,6 +310,11 @@ function M.new()
     return window.spaces
   end
 
+  -- state.windowList の { kCGWindowOwnerPID, kCGWindowLayer, kCGWindowAlpha } を画面上の window として返す。
+  function hs.window.list()
+    return state.windowList
+  end
+
   function hs.alert.show(message, ...)
     local id = "alert-" .. tostring(#state.alertDetails + 1)
     table.insert(state.alertDetails, {
@@ -368,9 +384,24 @@ function M.new()
     return chooser
   end
 
+  -- NSRunningApplication の hide は state.hideScripts に分けて記録し、隠す動作を再現する。
+  -- state.hideScriptFails か、pid の app がなければ失敗を返す。
   function hs.osascript.applescript(script)
-    table.insert(state.appleScripts, script)
-    return true
+    local pid = tonumber(script:match("runningApplicationWithProcessIdentifier:(%d+)"))
+    if not pid then
+      table.insert(state.appleScripts, script)
+      return true
+    end
+
+    table.insert(state.hideScripts, script)
+    if state.hideScriptFails then return false end
+    for _, app in pairs(state.applications) do
+      if app:pid() == pid then
+        app.hidden, app.frontmost = true, false
+        return true, false
+      end
+    end
+    return false
   end
 
   function hs.timer.doAfter(delay, callback)
