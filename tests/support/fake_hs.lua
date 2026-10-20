@@ -12,6 +12,7 @@ function M.window(id, options)
 
   function window:id() return id end
   function window:isStandard() return self.standard end
+  function window:title() return options.title or ("Window " .. id) end
   function window:role() return options.role or "AXWindow" end
   function window:subrole()
     if options.subrole then return options.subrole end

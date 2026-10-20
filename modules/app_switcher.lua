@@ -39,10 +39,12 @@ local function getCandidateWindows(app)
     local id = win:id()
     if not id or id <= 0 or seen[id] then return end
     -- 標準フィルターと同じ種類だけを扱い、補助パネルや Finder のデスクトップを除く。
-    if hs.window.filter.allowedWindowRoles[win:subrole()] then
-      table.insert(wins, win)
-      ids[win], seen[id] = id, true
-    end
+    -- タイトルのないダイアログも除く。Zed の小さな浮動ウィンドウなどが2枚目に数えられ、隠すのが遅れるため。
+    local subrole = win:subrole()
+    if not hs.window.filter.allowedWindowRoles[subrole] then return end
+    if subrole ~= "AXStandardWindow" and (win:title() or "") == "" then return end
+    table.insert(wins, win)
+    ids[win], seen[id] = id, true
   end
 
   for _, win in ipairs(app:allWindows() or {}) do

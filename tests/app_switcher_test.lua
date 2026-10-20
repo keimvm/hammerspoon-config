@@ -217,6 +217,30 @@ test.test("App Switcher は最前面の window が1つなら待たずに隠す",
   test.equal(0, #state.timers)
 end)
 
+test.test("App Switcher はタイトルのないダイアログを window として数えず、待たずに隠す", function()
+  local hs, state = fakeHs.new()
+  local window = fakeHs.window(10)
+  -- Zed が最前面のときに出る、タイトルのない小さな浮動ウィンドウ。
+  local popup = fakeHs.window(20, { standard = false, title = "" })
+  local dialog = fakeHs.window(30, { standard = false, title = "設定" })
+  local app = registerRunningApp(state, "Zed", {
+    frontmost = true, windows = { popup, window }, focusedWindow = window,
+  })
+
+  local appSwitcher = loadAppSwitcher(hs)
+  appSwitcher.toggleOrCycle("Zed")
+  test.equal(true, app.hidden)
+  test.equal(0, #state.timers)
+  test.equal(0, popup.focusCount)
+
+  -- タイトルのあるダイアログは、これまでどおり巡回先に数える。
+  app.hidden, app.frontmost, app.windows = false, true, { popup, window, dialog }
+  dialog.owner = app
+  appSwitcher.toggleOrCycle("Zed")
+  test.equal(false, app.hidden)
+  test.equal(1, #state.timers)
+end)
+
 test.test("App Switcher は非表示の保留中に別アプリの Hotkey が押されたら、すぐ隠してから切り替える", function()
   local hs, state = fakeHs.new()
   local codex = registerRunningApp(state, "Codex", {
