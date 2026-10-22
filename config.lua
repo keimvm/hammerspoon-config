@@ -36,6 +36,9 @@ return {
     { "cmd+x", run = "finder-cut", only = "Finder" },
     { "cmd+v", run = "finder-paste", only = "Finder" },
 
+    -- Finder では F2 で選んだファイルの名前を変更する（Return を送る）。
+    { "f2", send = "return", once = true, only = "Finder", label = "ファイル名を変更" },
+
     { "ctrl+p", run = "timer" },
     { "ctrl+;", run = "palette" },
   },
